@@ -2,6 +2,9 @@
 #include "jit_datasource.hpp"
 #include "jit_featureset.hpp"
 
+// curl
+#include "basiccurl.h"
+
 // boost
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
@@ -71,24 +74,29 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     if (!is_bound_) bind();
 
     // Given a width in meters, find the zoom level
-    int z = -(floor(std::log(q.get_bbox().width() / (20037508.34 * 2)) / std::log(2)));
+    int z = floor((
+        std::log(2) -
+        std::log(q.get_bbox().width() / (20037508.34 * 2)) /
+        std::log(2)));
 
-    double meters_per_tile = (20037508.34 * 2) / std::pow(2.0, z);
+    double meters_per_tile = (20037508.34 * 2) / std::pow(2.0, z + 1);
 
-    int y = ceil(q.get_bbox().miny() / meters_per_tile);
-    int x = ceil(q.get_bbox().miny() / meters_per_tile);
+    std::clog << q.get_bbox() << ", " << meters_per_tile << "\n";
 
-    std::cout << z << "," << x << "," << y << "\n";
+    std::clog << "y: " << q.get_bbox().miny() / meters_per_tile << "\n";
 
-    std::string _thisurl = boost::replace_all_copy(
-    boost::replace_all_copy(
-    boost::replace_all_copy(url_,
-            "{z}", boost::lexical_cast<std::string>(z)),
-            "{x}", boost::lexical_cast<std::string>(x)),
-            "{y}", boost::lexical_cast<std::string>(y));
+    int py = 2 * std::atan(std::pow(M_E, q.get_bbox().miny())) - 0.5 * M_PI;
+    int y = ceil((py + 20037508.34) / meters_per_tile);
+    int x = ceil((q.get_bbox().minx() + 20037508.34) / meters_per_tile);
 
-    std::cout << _thisurl << "\n";
+    thisurl_ = boost::replace_all_copy(
+        boost::replace_all_copy(
+        boost::replace_all_copy(url_,
+                "{z}", boost::lexical_cast<std::string>(z)),
+                "{x}", boost::lexical_cast<std::string>(x)),
+                "{y}", boost::lexical_cast<std::string>(y));
 
+    std::clog << thisurl_ << "\n";
 
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))

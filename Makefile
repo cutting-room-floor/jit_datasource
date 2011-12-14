@@ -2,7 +2,7 @@ CXX = g++
 
 CXXFLAGS = -fPIC -O3 -Isqlite_sources/ $(shell mapnik-config --cflags)
 
-LIBS = -lsqlite3 $(shell mapnik-config --libs --ldflags) -licuuc
+LIBS = -lsqlite3 -lcurl $(shell mapnik-config --libs --ldflags) -licuuc
 
 SRC = $(wildcard *.cpp)
 
