@@ -22,6 +22,8 @@ private:
     // recommended naming convention of datasource members:
     // name_, type_, extent_, and desc_
     static const std::string name_;
+    const mapnik::projection merc_;
+    const mapnik::projection wgs84_;
     int type_;
     mutable mapnik::layer_descriptor desc_;
     mutable std::string url_;

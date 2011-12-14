@@ -11,6 +11,8 @@
 
 // mapnik
 #include <mapnik/box2d.hpp>
+#include <mapnik/proj_transform.hpp>
+#include <mapnik/projection.hpp>
 
 using mapnik::datasource;
 using mapnik::parameters;
@@ -30,6 +32,10 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
         this->bind();
     }
 }
+
+mapnik::projection const *_merc =  new mapnik::projection("+init=epsg:3857");
+mapnik::projection const *_wgs84 = new mapnik::projection("+init=epsg:4326");
+mapnik::proj_transform const *transformer_ = new mapnik::proj_transform(*_merc, *_wgs84);
 
 void jit_datasource::bind() const
 {
@@ -73,30 +79,53 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 {
     if (!is_bound_) bind();
 
-    // Given a width in meters, find the zoom level
-    int z = floor((
+    mapnik::box2d <double> bb = q.get_bbox();
+    transformer_->forward(bb);
+
+    // stolen from mm
+    double px = M_PI * bb.minx() / 180.0;
+    double py = M_PI * bb.miny() / 180.0;
+    py = std::log(std::tan(0.25 * M_PI + 0.5 * py));
+    double ax = 0.15915494309189535;
+    double by = -0.15915494309189535;
+    px = ax * px + 0 * py + 0.5;
+    py = 0 * px + by * py + 0.5;
+
+    double zoom = floor((
         std::log(2) -
         std::log(q.get_bbox().width() / (20037508.34 * 2)) /
         std::log(2)));
 
-    double meters_per_tile = (20037508.34 * 2) / std::pow(2.0, z + 1);
+    double power = std::pow(2.0, zoom);
 
-    std::clog << q.get_bbox() << ", " << meters_per_tile << "\n";
+    px = floor(px * power);
+    py = floor(py * power);
 
-    std::clog << "y: " << q.get_bbox().miny() / meters_per_tile << "\n";
-
-    int py = 2 * std::atan(std::pow(M_E, q.get_bbox().miny())) - 0.5 * M_PI;
-    int y = ceil((py + 20037508.34) / meters_per_tile);
-    int x = ceil((q.get_bbox().minx() + 20037508.34) / meters_per_tile);
 
     thisurl_ = boost::replace_all_copy(
         boost::replace_all_copy(
         boost::replace_all_copy(url_,
-                "{z}", boost::lexical_cast<std::string>(z)),
-                "{x}", boost::lexical_cast<std::string>(x)),
-                "{y}", boost::lexical_cast<std::string>(y));
+                "{z}", boost::lexical_cast<std::string>(zoom)),
+                "{x}", boost::lexical_cast<std::string>(px)),
+                "{y}", boost::lexical_cast<std::string>(py));
 
-    std::clog << thisurl_ << "\n";
+    // std::clog << thisurl_ << "\n";
+    std::clog << "fetching\n";
+    CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
+
+    std::clog << "fetched\n";
+
+    if (resp != NULL)
+    {
+        char *blx = new char[resp->nbytes + 1];
+        memcpy(blx, resp->data, resp->nbytes);
+        blx[resp->nbytes] = '\0';
+        delete[] blx;
+    }
+    else
+    {
+        std::clog << "fail" << "\n";
+    }
 
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
