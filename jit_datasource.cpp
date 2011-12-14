@@ -5,6 +5,9 @@
 // curl
 #include "basiccurl.h"
 
+// yajl
+#include "yajl/yajl_tree.h"
+
 // boost
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
@@ -98,9 +101,8 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
     double power = std::pow(2.0, zoom);
 
-    px = floor(px * power);
-    py = floor(py * power);
-
+    px = ceil(px * power);
+    py = ceil(py * power);
 
     thisurl_ = boost::replace_all_copy(
         boost::replace_all_copy(
@@ -111,16 +113,39 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
     // std::clog << thisurl_ << "\n";
     std::clog << "fetching\n";
+    std::clog << thisurl_ << "\n";
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 
     std::clog << "fetched\n";
+    char errbuf[1024];
+    yajl_val node;
 
     if (resp != NULL)
     {
         char *blx = new char[resp->nbytes + 1];
         memcpy(blx, resp->data, resp->nbytes);
         blx[resp->nbytes] = '\0';
+
         delete[] blx;
+
+        std::string dstring = boost::trim_left_copy(std::string(resp->data));
+
+        std::clog << dstring;
+        std::clog << "starting parse\n";
+
+        node = yajl_tree_parse((const char *) dstring.c_str(), errbuf, sizeof(errbuf));
+
+        /* parse error handling */
+        if (node == NULL) {
+            std::clog << "parse_error: " << "\n";
+            if (strlen(errbuf)) {
+                fprintf(stderr, " %s", errbuf);
+            }
+            else fprintf(stderr, "unknown error");
+            fprintf(stderr, "\n");
+        }
+
+        std::clog << "looking good\n";
     }
     else
     {
