@@ -4,7 +4,10 @@
 
 // boost
 #include <boost/make_shared.hpp>
+#include <boost/algorithm/string.hpp>
 
+// mapnik
+#include <mapnik/box2d.hpp>
 
 using mapnik::datasource;
 using mapnik::parameters;
@@ -67,12 +70,30 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 {
     if (!is_bound_) bind();
 
-    std::cout << q.get_bbox();
+    // Given a width in meters, find the zoom level
+    int z = -(floor(std::log(q.get_bbox().width() / (20037508.34 * 2)) / std::log(2)));
+
+    double meters_per_tile = (20037508.34 * 2) / std::pow(2.0, z);
+
+    int y = ceil(q.get_bbox().miny() / meters_per_tile);
+    int x = ceil(q.get_bbox().miny() / meters_per_tile);
+
+    std::cout << z << "," << x << "," << y << "\n";
+
+    std::string _thisurl = boost::replace_all_copy(
+    boost::replace_all_copy(
+    boost::replace_all_copy(url_,
+            "{z}", boost::lexical_cast<std::string>(z)),
+            "{x}", boost::lexical_cast<std::string>(x)),
+            "{y}", boost::lexical_cast<std::string>(y));
+
+    std::cout << _thisurl << "\n";
+
 
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
     {
-        return boost::make_shared<jit_featureset>(q.get_bbox(),desc_.get_encoding());
+        return boost::make_shared<jit_featureset>(q.get_bbox(), desc_.get_encoding());
     }
 
     // otherwise return an empty featureset pointer

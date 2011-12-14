@@ -23,3 +23,8 @@ $(BIN) : $(OBJ)
 clean: 
 	rm -f $(OBJ)
 	rm -f $(BIN)
+
+deploy:
+	cp jit.input /usr/local/lib/mapnik/input/
+
+do: clean all deploy
