@@ -2,7 +2,72 @@
 #include <mapnik/feature_factory.hpp>
 #include <mapnik/geometry.hpp>
 
+// yajl
+#include "yajl/yajl_parse.h"
+
 #include "jit_featureset.hpp"
+
+
+static int gj_start_map(void * ctx)
+{
+    return 1;
+}
+
+static int gj_map_key(void * ctx, const unsigned char*, size_t t)
+{
+    return 1;
+}
+
+static int gj_end_map(void * ctx)
+{
+    return 1;
+}
+
+static int gj_null(void * ctx)
+{
+    return 1;
+}
+
+static int gj_number(void * ctx, const char* str, size_t t)
+{
+    std::cout << str << "\n";
+    return 1;
+}
+
+static int gj_boolean(void * ctx, int)
+{
+    return 1;
+}
+
+static int gj_string(void * ctx, const unsigned char* str, size_t t)
+{
+    std::cout << str << "\n";
+    return 1;
+}
+
+static int gj_start_array(void * ctx)
+{
+    return 1;
+}
+
+static int gj_end_array(void * ctx)
+{
+    return 1;
+}
+
+static yajl_callbacks callbacks = {
+    gj_null,
+    gj_boolean,
+    NULL,
+    NULL,
+    gj_number,
+    gj_string,
+    gj_start_map,
+    gj_map_key,
+    gj_end_map,
+    gj_start_array,
+    gj_end_array
+};
 
 jit_featureset::jit_featureset(mapnik::box2d<double> const& box, std::string const& encoding)
     : box_(box),

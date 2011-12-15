@@ -5,9 +5,6 @@
 // curl
 #include "basiccurl.h"
 
-// yajl
-#include "yajl/yajl_tree.h"
-
 // boost
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
@@ -118,8 +115,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 
     std::clog << "fetched\n";
-    char errbuf[1024];
-    yajl_val node;
 
     if (resp != NULL)
     {
@@ -133,18 +128,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
         std::clog << dstring;
         std::clog << "starting parse\n";
-
-        node = yajl_tree_parse((const char *) dstring.c_str(), errbuf, sizeof(errbuf));
-
-        /* parse error handling */
-        if (node == NULL) {
-            std::clog << "parse_error: " << "\n";
-            if (strlen(errbuf)) {
-                fprintf(stderr, " %s", errbuf);
-            }
-            else fprintf(stderr, "unknown error");
-            fprintf(stderr, "\n");
-        }
 
         std::clog << "looking good\n";
     }
