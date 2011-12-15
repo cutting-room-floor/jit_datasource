@@ -27,9 +27,10 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
     type_(datasource::Vector),
     desc_(*params_.get<std::string>("type"),
         *params_.get<std::string>("encoding","utf-8")),
-    url_(*params_.get<std::string>("url")),
+    url_(*params_.get<std::string>("url","")),
     extent_()
 {
+    if (url_.empty()) throw mapnik::datasource_exception("JIT Plugin: missing <url> parameter");
     if (bind)
     {
         this->bind();
