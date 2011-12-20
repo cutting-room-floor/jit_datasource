@@ -88,12 +88,31 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     }
 
     const double MAXEXTENT = 20037508.34;
+    const double D2R = M_PI / 180.0;
 
     transformer_->backward(bb);
+    // we're in mercator for a second
+    // FIXME: breaks under z2
+    double z = ceil(-(std::log(bb.width() / MAXEXTENT) - std::log(2.0)) / std::log(2.0));
+    // and then back in lat/lon
+    transformer_->forward(bb);
 
-    double z = floor(-(std::log(bb.width() / MAXEXTENT) - std::log(2.0)) / std::log(2.0));
+    double d = 256.0 * std::pow(2.0, z - 1.0);
 
-    std::clog << z << "\n";
+    mapnik::coord2d c = bb.center();
+
+
+    double Bc = (256.0 * std::pow(2.0, z)) / 360.0;
+    double Cc = (256.0 * std::pow(2.0, z)) / (2 * M_PI);
+
+    double f = std::min(std::max(std::sin(D2R * c.y), -0.9999), 0.9999);
+    double x = floor(d + c.x * Bc);
+
+    double lr = std::log((1.0 + f) / (1.0 - f));
+    // The deathline
+    double y = d + (0.5 * lr) * (-Cc);
+
+    std::clog << "tile: " << (x / 256.0) << ", " << (y / 256.0) << "\n";
 
     /*
     double px = M_PI * bb.minx() / 180.0;
