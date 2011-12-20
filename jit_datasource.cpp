@@ -94,6 +94,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     // we're in mercator for a second
     // FIXME: breaks under z2
     double z = ceil(-(std::log(bb.width() / MAXEXTENT) - std::log(2.0)) / std::log(2.0));
+
     // and then back in lat/lon
     transformer_->forward(bb);
 
@@ -101,16 +102,22 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
     mapnik::coord2d c = bb.center();
 
-
     double Bc = (256.0 * std::pow(2.0, z)) / 360.0;
     double Cc = (256.0 * std::pow(2.0, z)) / (2 * M_PI);
 
-    double f = std::min(std::max(std::sin(D2R * c.y), -0.9999), 0.9999);
+    double f = std::min(std::max(std::sin(D2R * c.y), -0.99999999), 0.9999999);
     double x = floor(d + c.x * Bc);
 
     double lr = std::log((1.0 + f) / (1.0 - f));
+
     // The deathline
-    double y = d + (0.5 * lr) * (-Cc);
+    double y = d + ((0.5 * lr) * (Cc * -1.0));
+    std::clog << "c++ Cc: " << std::fixed << Cc << "\n";
+    std::clog << "c++ -Cc: " << std::fixed << (0.5 * lr) * (-1.0 * Cc) << "\n";
+    std::clog << "c++ lr: " << std::fixed << lr << "\n";
+    std::clog << "c++ d: "  << std::fixed << d << "\n";
+    std::clog << "c++ f: "  << std::fixed << f << "\n";
+    std::clog << "c++ y: "  << std::fixed << y << "\n";
 
     std::clog << "tile: " << (x / 256.0) << ", " << (y / 256.0) << "\n";
 
