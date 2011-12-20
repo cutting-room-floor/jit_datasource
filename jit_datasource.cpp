@@ -80,10 +80,22 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 {
     if (!is_bound_) bind();
 
-    mapnik::box2d <double> bb = q.get_bbox();
-    transformer_->forward(bb);
+    mapnik::box2d <double> bb = q.get_unbuffered_bbox();
 
-    // stolen from mm
+    if (bb.width() == 0) {
+        // Invalid tiles mean we'll do dangerous math.
+        return mapnik::featureset_ptr();
+    }
+
+    const double MAXEXTENT = 20037508.34;
+
+    transformer_->backward(bb);
+
+    double z = floor(-(std::log(bb.width() / MAXEXTENT) - std::log(2.0)) / std::log(2.0));
+
+    std::clog << z << "\n";
+
+    /*
     double px = M_PI * bb.minx() / 180.0;
     double py = M_PI * bb.miny() / 180.0;
     py = std::log(std::tan(0.25 * M_PI + 0.5 * py));
@@ -125,11 +137,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
         delete[] blx;
 
         std::string dstring = boost::trim_left_copy(std::string(resp->data));
-
-        std::clog << dstring;
-        std::clog << "starting parse\n";
-
-        std::clog << "looking good\n";
     }
     else
     {
@@ -141,6 +148,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     {
         return boost::make_shared<jit_featureset>(q.get_bbox(), desc_.get_encoding());
     }
+    */
 
     // otherwise return an empty featureset pointer
     return mapnik::featureset_ptr();

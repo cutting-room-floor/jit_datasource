@@ -1,8 +1,8 @@
-CXX = g++
+CXX = clang++
 
-CXXFLAGS = -fPIC -O3 -Isqlite_sources/ $(shell mapnik-config --cflags)
+CXXFLAGS = -fPIC -O3 $(shell mapnik-config --cflags)
 
-LIBS = -lsqlite3 -lcurl -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
+LIBS = -lcurl -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
 
 SRC = $(wildcard *.cpp)
 
@@ -13,18 +13,21 @@ BIN = jit.input
 all : $(SRC) $(BIN)
 
 $(BIN) : $(OBJ)
-	$(CXX) -shared $(OBJ) $(LIBS) -o $@  
+	$(CXX) -shared $(OBJ) $(LIBS) -o $@
 
 .cpp.o :
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 .PHONY : clean
 
-clean: 
+clean:
 	rm -f $(OBJ)
 	rm -f $(BIN)
 
 deploy:
-	cp jit.input /usr/local/lib/mapnik/input/
+	cp jit.input $(shell mapnik-config --input-plugins)
 
-do: clean all deploy
+test:
+	./test.js
+
+do: clean all deploy test
