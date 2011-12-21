@@ -61,25 +61,47 @@ static int gj_end_map(void * ctx)
             mapnik::geometry_type * pt;
             pt = new mapnik::geometry_type(mapnik::Point);
             pt->move_to(
-                ((fm *) ctx)->point_cache.at(0),
-                ((fm *) ctx)->point_cache.at(1));
+                ((fm *) ctx)->point_cache.at(0).at(0),
+                ((fm *) ctx)->point_cache.at(0).at(1));
             ((fm *) ctx)->feature->add_geometry(pt);
         }
-        if (((fm *) ctx)->geometry_type == "LineString")
+        else if (((fm *) ctx)->geometry_type == "LineString")
         {
             mapnik::geometry_type * pt;
             pt = new mapnik::geometry_type(mapnik::LineString);
 
-            pt->set_capacity(((fm *) ctx)->point_cache.size() / 2);
+            pt->set_capacity(((fm *) ctx)->point_cache.at(0).size() / 2);
             pt->move_to(
-                ((fm *) ctx)->point_cache.at(0),
-                ((fm *) ctx)->point_cache.at(1));
+                ((fm *) ctx)->point_cache.at(0).at(0),
+                ((fm *) ctx)->point_cache.at(0).at(1));
 
-            for (int i = 2; i < ((fm *) ctx)->point_cache.size(); i += 2) {
+            for (int i = 2; i < ((fm *) ctx)->point_cache.at(0).size(); i += 2) {
                 pt->line_to(
-                    ((fm *) ctx)->point_cache.at(i),
-                    ((fm *) ctx)->point_cache.at(i + 1));
+                    ((fm *) ctx)->point_cache.at(0).at(i),
+                    ((fm *) ctx)->point_cache.at(0).at(i + 1));
             }
+            ((fm *) ctx)->feature->add_geometry(pt);
+        }
+        else if (((fm *) ctx)->geometry_type == "MultiLineString")
+        {
+            mapnik::geometry_type * pt;
+            pt = new mapnik::geometry_type(mapnik::MultiLineString);
+
+            for (int i = 0; i < ((fm *) ctx)->point_cache.size(); i++) {
+
+                pt->set_capacity(((fm *) ctx)->point_cache.at(i).size() / 2);
+                pt->move_to(
+                    ((fm *) ctx)->point_cache.at(i).at(0),
+                    ((fm *) ctx)->point_cache.at(i).at(1));
+
+                for (int j = 2; j < ((fm *) ctx)->point_cache.at(i).size(); j += 2) {
+                    pt->line_to(
+                        ((fm *) ctx)->point_cache.at(i).at(j),
+                        ((fm *) ctx)->point_cache.at(i).at(j + 1));
+                }
+
+            }
+
             ((fm *) ctx)->feature->add_geometry(pt);
         }
         ((fm *) ctx)->state = parser_in_features;
@@ -113,7 +135,14 @@ static int gj_number(void * ctx, const char* str, size_t t)
 
     if (((fm *) ctx)->state == parser_in_coordinates)
     {
-        ((fm *) ctx)->point_cache.push_back(x);
+        if (((fm *) ctx)->coord_dimensions == 2)
+        {
+            ((fm *) ctx)->point_cache.at(0).push_back(x);
+        }
+        else if (((fm *) ctx)->coord_dimensions == 3)
+        {
+            ((fm *) ctx)->point_cache.back().push_back(x);
+        }
     }
     if (((fm *) ctx)->state == parser_in_properties)
     {
@@ -141,6 +170,11 @@ static int gj_start_array(void * ctx)
 {
     if (((fm *) ctx)->state == parser_in_coordinates)
     {
+        if (((fm *) ctx)->coord_dimensions == 1)
+        {
+            std::vector <double> sub_cache;
+            ((fm *) ctx)->point_cache.push_back(sub_cache);
+        }
         ((fm *) ctx)->coord_dimensions++;
     }
     return 1;
@@ -200,7 +234,6 @@ jit_featureset::jit_featureset(
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
     state_bundle.feature = feature;
 
-
     for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
 
         int parse_result;
@@ -231,6 +264,7 @@ jit_featureset::jit_featureset(
 
         }
     }
+
     feature_id_ = 0;
 }
 

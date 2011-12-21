@@ -49,7 +49,6 @@ void jit_datasource::bind() const
 
 jit_datasource::~jit_datasource() { }
 
-// This name must match the plugin filename, eg 'jit.input'
 std::string const jit_datasource::name_="jit";
 
 std::string jit_datasource::name()
@@ -82,6 +81,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
     mapnik::box2d <double> bb = q.get_unbuffered_bbox();
 
+
     if (bb.width() == 0) {
         // Invalid tiles mean we'll do dangerous math.
         return mapnik::featureset_ptr();
@@ -111,9 +111,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
                 "{x}", boost::lexical_cast<std::string>(tx)),
                 "{y}", boost::lexical_cast<std::string>(ty));
 
-    #ifdef DEBUG
     std::clog << thisurl_ << "\n";
-    #endif
 
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 
@@ -121,6 +119,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     {
         if (resp->nbytes == 0)
         {
+            std::clog << "empty response\n";
             return mapnik::featureset_ptr();
         }
 
