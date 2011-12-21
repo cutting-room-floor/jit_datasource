@@ -10,9 +10,6 @@ var image = new mapnik.Image(256, 256);
 map.bufferSize = 0;
 map.fromString(fs.readFileSync('test.xml', 'utf-8'),
     function(err, m) {
-        var i = 14;
-        var xyz = sm.bbox(1, 1, i);
-        var ll = xyz;
-        m.extent = sm.bbox(1, 1, i);
-        m.renderFileSync('/tmp/100_100_10.png');
+    m.extent = sm.bbox(0, 0, 0);
+    m.renderFileSync('/tmp/0_0_0.png');
 });

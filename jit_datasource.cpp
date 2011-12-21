@@ -93,7 +93,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     const double MERCA = 6378137;
     const double D2R = M_PI / 180.0;
     double mercwidth = (MERCA * bb.maxx() * D2R) - (MERCA * bb.minx() * D2R);
-    double z = ceil(-(std::log(mercwidth / MAXEXTENT) - std::log(2.0)) / std::log(2.0));
+    double z = abs(ceil(-(std::log(mercwidth / MAXEXTENT) - std::log(2.0)) / std::log(2.0)));
     double d = 256.0 * std::pow(2.0, z - 1.0);
     double Bc = (256.0 * std::pow(2.0, z)) / 360.0;
     double Cc = (256.0 * std::pow(2.0, z)) / (2 * M_PI);
@@ -131,7 +131,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
         delete[] blx;
 
         std::string dstring = boost::trim_left_copy(std::string(resp->data));
-        std::clog << dstring;
         return boost::make_shared<jit_featureset>(
                 q.get_bbox(),
                 dstring,
