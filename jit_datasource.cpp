@@ -87,68 +87,30 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
         return mapnik::featureset_ptr();
     }
 
-    const double MAXEXTENT = 20037508.34;
-    const double D2R = M_PI / 180.0;
-
-    transformer_->backward(bb);
-    // we're in mercator for a second
-    // FIXME: breaks under z2
-    double z = ceil(-(std::log(bb.width() / MAXEXTENT) - std::log(2.0)) / std::log(2.0));
-
-    // and then back in lat/lon
-    transformer_->forward(bb);
-
-    double d = 256.0 * std::pow(2.0, z - 1.0);
-
     mapnik::coord2d c = bb.center();
 
+    const double MAXEXTENT = 20037508.34;
+    const double MERCA = 6378137;
+    const double D2R = M_PI / 180.0;
+    double mercwidth = (MERCA * bb.maxx() * D2R) - (MERCA * bb.minx() * D2R);
+    double z = ceil(-(std::log(mercwidth / MAXEXTENT) - std::log(2.0)) / std::log(2.0));
+    double d = 256.0 * std::pow(2.0, z - 1.0);
     double Bc = (256.0 * std::pow(2.0, z)) / 360.0;
     double Cc = (256.0 * std::pow(2.0, z)) / (2 * M_PI);
-
     double f = std::min(std::max(std::sin(D2R * c.y), -0.99999999), 0.9999999);
     double x = floor(d + c.x * Bc);
+    double y = d + ((0.5 * std::log((1.0 + f) / (1.0 - f))) * (Cc * -1.0));
 
-    double lr = std::log((1.0 + f) / (1.0 - f));
-
-    // The deathline
-    double y = d + ((0.5 * lr) * (Cc * -1.0));
-    std::clog << "c++ Cc: " << std::fixed << Cc << "\n";
-    std::clog << "c++ -Cc: " << std::fixed << (0.5 * lr) * (-1.0 * Cc) << "\n";
-    std::clog << "c++ lr: " << std::fixed << lr << "\n";
-    std::clog << "c++ d: "  << std::fixed << d << "\n";
-    std::clog << "c++ f: "  << std::fixed << f << "\n";
-    std::clog << "c++ y: "  << std::fixed << y << "\n";
-
-    std::clog << "tile: " << (x / 256.0) << ", " << (y / 256.0) << "\n";
-
-    /*
-    double px = M_PI * bb.minx() / 180.0;
-    double py = M_PI * bb.miny() / 180.0;
-    py = std::log(std::tan(0.25 * M_PI + 0.5 * py));
-    double ax = 0.15915494309189535;
-    double by = -0.15915494309189535;
-    px = ax * px + 0 * py + 0.5;
-    py = 0 * px + by * py + 0.5;
-
-    double zoom = floor((
-        std::log(2) -
-        std::log(q.get_bbox().width() / (20037508.34 * 2)) /
-        std::log(2)));
-
-    double power = std::pow(2.0, zoom);
-
-    px = ceil(px * power);
-    py = ceil(py * power);
+    int tx = floor(x / 256);
+    int ty = floor(y / 256);
 
     thisurl_ = boost::replace_all_copy(
         boost::replace_all_copy(
         boost::replace_all_copy(url_,
-                "{z}", boost::lexical_cast<std::string>(zoom)),
-                "{x}", boost::lexical_cast<std::string>(px)),
-                "{y}", boost::lexical_cast<std::string>(py));
+                "{z}", boost::lexical_cast<std::string>(z)),
+                "{x}", boost::lexical_cast<std::string>(tx)),
+                "{y}", boost::lexical_cast<std::string>(ty));
 
-    // std::clog << thisurl_ << "\n";
-    std::clog << "fetching\n";
     std::clog << thisurl_ << "\n";
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 
@@ -174,7 +136,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     {
         return boost::make_shared<jit_featureset>(q.get_bbox(), desc_.get_encoding());
     }
-    */
 
     // otherwise return an empty featureset pointer
     return mapnik::featureset_ptr();
