@@ -14,11 +14,5 @@ map.fromString(fs.readFileSync('test.xml', 'utf-8'),
         var xyz = sm.bbox(1, 1, i);
         var ll = xyz;
         m.extent = sm.bbox(1, 1, i);
-        console.log(ll);
-        console.log('mid from here: ' + ((ll[0] + ll[2]) / 2));
-        console.log('mid from here: ' + ((ll[1] + ll[3]) / 2));
-        var px = sm.px(
-            [(ll[0] + ll[2]) / 2,
-             (ll[1] + ll[3]) / 2], i);
         m.renderFileSync('/tmp/100_100_10.png');
 });

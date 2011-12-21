@@ -111,13 +111,19 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
                 "{x}", boost::lexical_cast<std::string>(tx)),
                 "{y}", boost::lexical_cast<std::string>(ty));
 
+    #ifdef DEBUG
     std::clog << thisurl_ << "\n";
-    CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
+    #endif
 
-    std::clog << "fetched\n";
+    CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 
     if (resp != NULL)
     {
+        if (resp->nbytes == 0)
+        {
+            return mapnik::featureset_ptr();
+        }
+
         char *blx = new char[resp->nbytes + 1];
         memcpy(blx, resp->data, resp->nbytes);
         blx[resp->nbytes] = '\0';
@@ -125,16 +131,16 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
         delete[] blx;
 
         std::string dstring = boost::trim_left_copy(std::string(resp->data));
+        std::clog << dstring;
+        return boost::make_shared<jit_featureset>(
+                q.get_bbox(),
+                dstring,
+                desc_.get_encoding());
     }
     else
     {
-        std::clog << "fail" << "\n";
-    }
-
-    // if the query box intersects our world extent then query for features
-    if (extent_.intersects(q.get_bbox()))
-    {
-        return boost::make_shared<jit_featureset>(q.get_bbox(), desc_.get_encoding());
+        std::clog << "null ptr\n";
+        return mapnik::featureset_ptr();
     }
 
     // otherwise return an empty featureset pointer
