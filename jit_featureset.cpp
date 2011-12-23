@@ -130,8 +130,10 @@ static int gj_boolean(void * ctx, int x)
 
 static int gj_number(void * ctx, const char* str, size_t t)
 {
-    std::string str_ = std::string((const char*) str, t);
-    double x = boost::lexical_cast<double>(str_);
+    // std::string str_ = std::string((const char*) str, t);
+    // double x = boost::lexical_cast<double>(str_);
+    double x = strtod(str, NULL);
+    // std::clog << "num: " << std::fixed << x << "\n";
 
     if (((fm *) ctx)->state == parser_in_coordinates)
     {
@@ -264,6 +266,8 @@ jit_featureset::jit_featureset(
 
         }
     }
+
+    yajl_free(hand);
 
     feature_id_ = 0;
 }

@@ -14,6 +14,9 @@
 #include <mapnik/proj_transform.hpp>
 #include <mapnik/projection.hpp>
 
+// yajl
+#include "yajl/yajl_tree.h"
+
 using mapnik::datasource;
 using mapnik::parameters;
 
@@ -25,6 +28,8 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
     desc_(*params_.get<std::string>("type"),
         *params_.get<std::string>("encoding","utf-8")),
     url_(*params_.get<std::string>("url","")),
+    minzoom_(0),
+    maxzoom_(10),
     extent_()
 {
     if (url_.empty()) throw mapnik::datasource_exception("JIT Plugin: missing <url> parameter");
@@ -34,13 +39,41 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
     }
 }
 
-mapnik::projection const *_merc =  new mapnik::projection("+init=epsg:3857");
-mapnik::projection const *_wgs84 = new mapnik::projection("+init=epsg:4326");
-mapnik::proj_transform const *transformer_ = new mapnik::proj_transform(*_merc, *_wgs84);
-
 void jit_datasource::bind() const
 {
     if (is_bound_) return;
+
+    CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
+
+    if ((resp == NULL) || (resp->nbytes == 0))
+    {
+        throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint invalid");
+    }
+
+    char *blx = new char[resp->nbytes + 1];
+    memcpy(blx, resp->data, resp->nbytes);
+    blx[resp->nbytes] = '\0';
+
+    delete[] blx;
+
+    std::string tjstring = boost::trim_left_copy(std::string(resp->data));
+    char errbuf[1024];
+    errbuf[0] = 0;
+    yajl_val node;
+    yajl_val v;
+
+    node = yajl_tree_parse(tjstring.c_str(), errbuf, sizeof(errbuf));
+
+    const char * minzoom_path[] = { "minzoom", (const char *) 0 };
+    minzoom_ = YAJL_GET_INTEGER(yajl_tree_get(node, minzoom_path, yajl_t_number));
+
+    const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
+    minzoom_ = YAJL_GET_INTEGER(yajl_tree_get(node, maxzoom_path, yajl_t_number));
+
+    // const char * extent_path[] = { "extent", (const char *) 0 };
+    // yajl_t_array ex;
+    // *ex = YAJL_GET_ARRAY(yajl_tree_get(node, maxzoom_path, yajl_t_array));
+    // std::clog << ex;
 
     extent_.init(-20037508.34,-20037508.34,20037508.34,20037508.34);
 
@@ -111,18 +144,10 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
                 "{x}", boost::lexical_cast<std::string>(tx)),
                 "{y}", boost::lexical_cast<std::string>(ty));
 
-    std::clog << thisurl_ << "\n";
-
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 
-    if (resp != NULL)
+    if ((resp != NULL) && (resp->nbytes > 0))
     {
-        if (resp->nbytes == 0)
-        {
-            std::clog << "empty response\n";
-            return mapnik::featureset_ptr();
-        }
-
         char *blx = new char[resp->nbytes + 1];
         memcpy(blx, resp->data, resp->nbytes);
         blx[resp->nbytes] = '\0';

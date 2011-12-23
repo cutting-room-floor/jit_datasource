@@ -11,7 +11,7 @@
         <StyleName>style</StyleName>
         <Datasource>
             <Parameter name="type">jit</Parameter>
-            <Parameter name="url">http://localhost:20010/{z}/{x}/{y}.geojson</Parameter>
+            <Parameter name="url">http://localhost:20010/roads.json</Parameter>
         </Datasource>
     </Layer>
 </Map>
