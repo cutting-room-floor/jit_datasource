@@ -25,6 +25,7 @@ private:
     int type_;
     mutable mapnik::layer_descriptor desc_;
     mutable std::string url_;
+    mutable std::string tileurl_;
     mutable std::string thisurl_;
     mutable int minzoom_;
     mutable int maxzoom_;

@@ -233,6 +233,7 @@ jit_featureset::jit_featureset(
     yajl_config(hand, yajl_allow_comments, 1);
     yajl_config(hand, yajl_allow_trailing_garbage, 1);
 
+
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
     state_bundle.feature = feature;
 
@@ -268,6 +269,8 @@ jit_featureset::jit_featureset(
     }
 
     yajl_free(hand);
+
+    std::clog << "JIT: done parsing features\n";
 
     feature_id_ = 0;
 }

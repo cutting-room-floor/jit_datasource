@@ -76,6 +76,11 @@ void jit_datasource::bind() const
     v = yajl_tree_get(node, maxzoom_path, yajl_t_number);
     maxzoom_ = YAJL_GET_INTEGER(v);
 
+    const char * vectors_path[] = { "vectors", (const char *) 0 };
+    v = yajl_tree_get(node, vectors_path, yajl_t_string);
+    char* ts = YAJL_GET_STRING(v);
+    tileurl_ = std::string(ts);
+
     // const char * type_path[] = { "data", "geometry_type", (const char *) 0 };
     // v = yajl_tree_get(node, type_path, yajl_t_string);
     // const char* type_c_str = YAJL_GET_STRING(v);
@@ -123,7 +128,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
     mapnik::box2d <double> bb = q.get_unbuffered_bbox();
 
-
     if (bb.width() == 0) {
         // Invalid tiles mean we'll do dangerous math.
         return mapnik::featureset_ptr();
@@ -155,12 +159,14 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
     thisurl_ = boost::replace_all_copy(
         boost::replace_all_copy(
-        boost::replace_all_copy(url_,
+        boost::replace_all_copy(tileurl_,
                 "{z}", boost::lexical_cast<std::string>(z)),
                 "{x}", boost::lexical_cast<std::string>(tx)),
                 "{y}", boost::lexical_cast<std::string>(ty));
 
+    std::clog << "JIT: requesting " << thisurl_ << "\n";
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
+    std::clog << "JIT: got " << thisurl_ << "\n";
 
     if ((resp != NULL) && (resp->nbytes > 0))
     {
@@ -172,9 +178,9 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
 
         std::string dstring = boost::trim_left_copy(std::string(resp->data));
         return boost::make_shared<jit_featureset>(
-                q.get_bbox(),
-                dstring,
-                desc_.get_encoding());
+            q.get_bbox(),
+            dstring,
+            desc_.get_encoding());
     }
     else
     {
