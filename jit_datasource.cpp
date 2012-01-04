@@ -62,8 +62,6 @@ void jit_datasource::bind() const
     yajl_val node;
     yajl_val v;
 
-    std::clog << tjstring;
-
     node = yajl_tree_parse(tjstring.c_str(), errbuf, sizeof(errbuf));
 
     if (node == NULL) {
@@ -72,11 +70,11 @@ void jit_datasource::bind() const
 
     const char * minzoom_path[] = { "minzoom", (const char *) 0 };
     v = yajl_tree_get(node, minzoom_path, yajl_t_number);
-    maxzoom_ = YAJL_GET_INTEGER(v);
+    minzoom_ = YAJL_GET_INTEGER(v);
 
     const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
     v = yajl_tree_get(node, maxzoom_path, yajl_t_number);
-    minzoom_ = YAJL_GET_INTEGER(v);
+    maxzoom_ = YAJL_GET_INTEGER(v);
 
     // const char * type_path[] = { "data", "geometry_type", (const char *) 0 };
     // v = yajl_tree_get(node, type_path, yajl_t_string);
@@ -180,7 +178,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     }
     else
     {
-        std::clog << "null ptr\n";
         return mapnik::featureset_ptr();
     }
 
