@@ -11,8 +11,6 @@
 
 // mapnik
 #include <mapnik/box2d.hpp>
-#include <mapnik/proj_transform.hpp>
-#include <mapnik/projection.hpp>
 
 // yajl
 #include "yajl/yajl_tree.h"
@@ -43,12 +41,16 @@ void jit_datasource::bind() const
 {
     if (is_bound_) return;
 
+    std::clog << "binding on " << url_ << std::endl;
+
     CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
 
     if ((resp == NULL) || (resp->nbytes == 0))
     {
         throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
     }
+
+    std::clog << "JIT: using curl response\n";
 
     char *blx = new char[resp->nbytes + 1];
     memcpy(blx, resp->data, resp->nbytes);
@@ -173,10 +175,9 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
         char *blx = new char[resp->nbytes + 1];
         memcpy(blx, resp->data, resp->nbytes);
         blx[resp->nbytes] = '\0';
-
+        std::string dstring = std::string(blx);
         delete[] blx;
 
-        std::string dstring = boost::trim_left_copy(std::string(resp->data));
         return boost::make_shared<jit_featureset>(
             q.get_bbox(),
             dstring,

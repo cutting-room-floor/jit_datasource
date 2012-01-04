@@ -2,6 +2,8 @@
 #include <mapnik/feature_factory.hpp>
 #include <mapnik/geometry.hpp>
 
+#include <mapnik/util/geometry_to_wkt.hpp>
+
 // yajl
 #include "yajl/yajl_parse.h"
 
@@ -130,10 +132,7 @@ static int gj_boolean(void * ctx, int x)
 
 static int gj_number(void * ctx, const char* str, size_t t)
 {
-    // std::string str_ = std::string((const char*) str, t);
-    // double x = boost::lexical_cast<double>(str_);
     double x = strtod(str, NULL);
-    // std::clog << "num: " << std::fixed << x << "\n";
 
     if (((fm *) ctx)->state == parser_in_coordinates)
     {
@@ -222,6 +221,8 @@ jit_featureset::jit_featureset(
       input_string_(input_string),
       tr_(new mapnik::transcoder(encoding)) {
 
+    std::clog << "starting and done is " << state_bundle.done << std::endl;
+
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
 
@@ -236,6 +237,8 @@ jit_featureset::jit_featureset(
 
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
     state_bundle.feature = feature;
+
+    std::clog << "input string was " << input_string_.length() << " long" << std::endl;
 
     for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
 
@@ -271,6 +274,8 @@ jit_featureset::jit_featureset(
     yajl_free(hand);
 
     std::clog << "JIT: done parsing features\n";
+    std::clog << "JIT: collected " << feature_id_ << " features\n";
+    std::clog << "JIT: itt ended at " << itt_ << " \n";
 
     feature_id_ = 0;
 }

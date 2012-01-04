@@ -31,6 +31,12 @@ struct fm {
     std::string geometry_type;
     mutable std::vector< std::vector<double> > point_cache;
     parser_state state;
+    fm() :
+        done(0),
+        coord_dimensions(0),
+        property_name(""),
+        geometry_type("")
+    { }
 };
 
 // extend the mapnik::Featureset defined in include/mapnik/datasource.hpp

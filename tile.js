@@ -46,11 +46,12 @@ create = function(size) {
 // create a pool of 10 maps
 // this allows us to manage concurrency under high load
 var maps = create(1);
+var proj4 = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs +over';
 
 var acquire = function(id,options,callback) {
     methods = {
         create: function(cb) {
-            var obj = new mapnik.Map(options.width || 256, options.height || 256);
+            var obj = new mapnik.Map(256, 256, proj4);
             obj.load(id,{strict:true},function(err,obj) {
                 if (err) callback(err,null);
                 if (options.buffer_size) obj.buffer_size(options.buffer_size);
@@ -71,6 +72,9 @@ var acquire = function(id,options,callback) {
 
 app.get('/:z/:x/:y.png', function(req, res, next){
     acquire('test.xml', {}, function(err, map) {
+        if (err) {
+            console.log(err);
+        }
         // calculate the bounding box for each tile
         var bbox = sm.bbox(parseInt(req.params.x, 10),
             parseInt(req.params.y, 10),
