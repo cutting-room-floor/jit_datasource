@@ -23,7 +23,7 @@ using mapnik::parameters;
 DATASOURCE_PLUGIN(jit_datasource)
 
 jit_datasource::jit_datasource(parameters const& params, bool bind)
-: datasource(params),
+    : datasource(params),
     type_(datasource::Vector),
     desc_(*params_.get<std::string>("type"),
         *params_.get<std::string>("encoding","utf-8")),
@@ -47,7 +47,7 @@ void jit_datasource::bind() const
 
     if ((resp == NULL) || (resp->nbytes == 0))
     {
-        throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint invalid");
+        throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
     }
 
     char *blx = new char[resp->nbytes + 1];
@@ -62,18 +62,29 @@ void jit_datasource::bind() const
     yajl_val node;
     yajl_val v;
 
+    std::clog << tjstring;
+
     node = yajl_tree_parse(tjstring.c_str(), errbuf, sizeof(errbuf));
 
+    if (node == NULL) {
+        throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint invalid.");
+    }
+
     const char * minzoom_path[] = { "minzoom", (const char *) 0 };
-    minzoom_ = YAJL_GET_INTEGER(yajl_tree_get(node, minzoom_path, yajl_t_number));
+    v = yajl_tree_get(node, minzoom_path, yajl_t_number);
+    maxzoom_ = YAJL_GET_INTEGER(v);
 
     const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
-    minzoom_ = YAJL_GET_INTEGER(yajl_tree_get(node, maxzoom_path, yajl_t_number));
+    v = yajl_tree_get(node, maxzoom_path, yajl_t_number);
+    minzoom_ = YAJL_GET_INTEGER(v);
+
+    // const char * type_path[] = { "data", "geometry_type", (const char *) 0 };
+    // v = yajl_tree_get(node, type_path, yajl_t_string);
+    // const char* type_c_str = YAJL_GET_STRING(v);
+    // std::clog << type_c_str << "\n";
 
     // const char * extent_path[] = { "extent", (const char *) 0 };
-    // yajl_t_array ex;
-    // *ex = YAJL_GET_ARRAY(yajl_tree_get(node, maxzoom_path, yajl_t_array));
-    // std::clog << ex;
+    // v = yajl_tree_get(node, extent_path, yajl_t_array);
 
     extent_.init(-20037508.34,-20037508.34,20037508.34,20037508.34);
 

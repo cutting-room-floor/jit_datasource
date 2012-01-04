@@ -28,6 +28,6 @@ deploy:
 	cp jit.input $(shell mapnik-config --input-plugins)
 
 test:
-	./test.js
+	./tile.js
 
 do: clean all deploy test

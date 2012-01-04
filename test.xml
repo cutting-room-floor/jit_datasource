@@ -11,7 +11,7 @@
         <StyleName>style</StyleName>
         <Datasource>
             <Parameter name="type">jit</Parameter>
-            <Parameter name="url">http://localhost:20010/roads.json</Parameter>
+            <Parameter name="url">http://localhost:20010/view/osm.road.json</Parameter>
         </Datasource>
     </Layer>
 </Map>
