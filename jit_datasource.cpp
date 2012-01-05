@@ -189,12 +189,20 @@ mapnik::layer_descriptor jit_datasource::get_descriptor() const {
 mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     if (!is_bound_) bind();
 
+    mapnik::projection const *_merc =  new mapnik::projection(MERCATOR_PROJ4);
+    mapnik::projection const *_wgs84 = new mapnik::projection("+init=epsg:4326");
+    mapnik::proj_transform const *transformer_ = new mapnik::proj_transform(*_merc, *_wgs84);
+
     mapnik::box2d <double> bb = q.get_unbuffered_bbox();
+
+    transformer_->forward(bb);
 
     if (bb.width() == 0) {
         // Invalid tiles mean we'll do dangerous math.
         return mapnik::featureset_ptr();
     }
+
+    std::clog << "JIT Plugin: unbuffered bbox: " << bb << std::endl;
 
     mapnik::coord2d c = bb.center();
 
@@ -209,6 +217,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     // Also bail early if the datasource indicates that there
     // will be no tiles here.
     if (z > maxzoom_ || z < minzoom_) {
+        std::clog << "JIT Datasource: bailing early because zoom is " << z << std::endl;
         return mapnik::featureset_ptr();
     }
 
@@ -225,13 +234,17 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     thisurl_ = boost::replace_all_copy(
         boost::replace_all_copy(
         boost::replace_all_copy(tileurl_,
-                "{z}", boost::lexical_cast<std::string>(z)),
-                "{x}", boost::lexical_cast<std::string>(tx)),
-                "{y}", boost::lexical_cast<std::string>(ty));
+            "{z}", boost::lexical_cast<std::string>(z)),
+            "{x}", boost::lexical_cast<std::string>(tx)),
+            "{y}", boost::lexical_cast<std::string>(ty));
 
+#ifdef MAPNIK_DEBUG
     std::clog << "JIT: requesting " << thisurl_ << "\n";
+#endif
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
+#ifdef MAPNIK_DEBUG
     std::clog << "JIT: got " << thisurl_ << "\n";
+#endif
 
     if ((resp != NULL) && (resp->nbytes > 0)) {
         char *blx = new char[resp->nbytes + 1];
@@ -247,9 +260,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     } else {
         return mapnik::featureset_ptr();
     }
-
-    // otherwise return an empty featureset pointer
-    return mapnik::featureset_ptr();
 }
 
 mapnik::featureset_ptr

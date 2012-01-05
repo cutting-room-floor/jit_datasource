@@ -1,6 +1,6 @@
 CXX = clang++
 
-CXXFLAGS = -fPIC -O3 $(shell mapnik-config --cflags)
+CXXFLAGS = -DMAPNIK_DEBUG -fPIC -O3 $(shell mapnik-config --cflags)
 
 LIBS = -lcurl -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
 
