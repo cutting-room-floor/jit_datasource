@@ -5,9 +5,9 @@ deciphers tiles, downloads and parses GeoJSON.
 
 The GeoJSON datasource is [incubated in its own repository](https://github.com/tmcw/geojson_datasource).
 
-              -> TileStream          \
-    0/0/0.png -> TileMill             -> bbox[4] -> Mapnik -> JIT -> 0/0/0 -> tiled data server
-              -> *Mapnik Tileserver  /
+                     -> TileStream          \
+    url=tilejson url -> 0/0/0.png -> TileMill             -> bbox[4] -> Mapnik -> JIT -> 0/0/0 -> tiled data server
+                     -> *Mapnik Tileserver  /
 
 ### Building
 
