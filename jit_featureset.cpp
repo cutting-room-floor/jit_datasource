@@ -218,8 +218,6 @@ jit_featureset::jit_featureset(
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
     state_bundle.feature = feature;
 
-    std::clog << "input string was " << input_string_.length() << " long" << std::endl;
-
     for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
         int parse_result;
 

@@ -26,6 +26,7 @@
 
 // mapnik
 #include <mapnik/box2d.hpp>
+#include <mapnik/proj_transform.hpp>
 
 #include <string>
 #include <algorithm>
@@ -65,7 +66,13 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
 void jit_datasource::bind() const {
     if (is_bound_) return;
 
+    mapnik::projection const *_merc =  new mapnik::projection(MERCATOR_PROJ4);
+    mapnik::projection const *_wgs84 = new mapnik::projection("+init=epsg:4326");
+    mapnik::proj_transform const *transformer_ = new mapnik::proj_transform(*_merc, *_wgs84);
+
+#ifdef MAPNIK_DEBUG
     std::clog << "binding on " << url_ << std::endl;
+#endif
 
     CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
 
@@ -73,7 +80,9 @@ void jit_datasource::bind() const {
         throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
     }
 
+#ifdef MAPNIK_DEBUG
     std::clog << "JIT: using curl response\n";
+#endif
 
     char *blx = new char[resp->nbytes + 1];
     memcpy(blx, resp->data, resp->nbytes);
@@ -94,19 +103,22 @@ void jit_datasource::bind() const {
     }
 
     const char * minzoom_path[] = { "minzoom", (const char *) 0 };
+    const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
+    const char * vectors_path[] = { "vectors", (const char *) 0 };
+    const char * type_path[] = { "geometry_type", (const char *) 0 };
+    const char * fields_path[] = { "fields", (const char *) 0 };
+    const char * bounds_path[] = { "bounds", (const char *) 0 };
+
     v = yajl_tree_get(node, minzoom_path, yajl_t_number);
     minzoom_ = YAJL_GET_INTEGER(v);
 
-    const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
     v = yajl_tree_get(node, maxzoom_path, yajl_t_number);
     maxzoom_ = YAJL_GET_INTEGER(v);
 
-    const char * vectors_path[] = { "vectors", (const char *) 0 };
     v = yajl_tree_get(node, vectors_path, yajl_t_string);
     char* ts = YAJL_GET_STRING(v);
     tileurl_ = std::string(ts);
 
-    const char * type_path[] = { "geometry_type", (const char *) 0 };
     v = yajl_tree_get(node, type_path, yajl_t_string);
     if (v != NULL) {
       // const char* type_c_str = strdup(YAJL_GET_STRING(v));
@@ -115,7 +127,6 @@ void jit_datasource::bind() const {
       std::clog << "geometry type undefined\n";
     }
 
-    const char * fields_path[] = { "fields", (const char *) 0 };
     v = yajl_tree_get(node, fields_path, yajl_t_object);
     if (v != NULL) {
       for (int i = 0; i < YAJL_GET_OBJECT(v)->len; i++) {
@@ -131,10 +142,22 @@ void jit_datasource::bind() const {
       std::clog << "fields undefined\n";
     }
 
-    // const char * extent_path[] = { "extent", (const char *) 0 };
-    // v = yajl_tree_get(node, extent_path, yajl_t_array);
-
-    extent_.init(-20037508.34, -20037508.34, 20037508.34, 20037508.34);
+    v = yajl_tree_get(node, bounds_path, yajl_t_array);
+    if ((v != NULL) && (YAJL_GET_ARRAY(v)->len == 4)) {
+      mapnik::box2d <double> latBox = mapnik::box2d<double>(
+          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[0]),
+          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[1]),
+          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[2]),
+          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[3]));
+      
+      transformer_->backward(latBox);
+      extent_ = latBox;
+    } else {
+#ifdef MAPNIK_DEBUG
+      std::clog << "JIT Plugin: extent not found in TileJSON, setting to world.\n";
+#endif
+      extent_.init(-20037508.34, -20037508.34, 20037508.34, 20037508.34);
+    }
 
     is_bound_ = true;
 }
