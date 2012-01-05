@@ -106,10 +106,30 @@ void jit_datasource::bind() const {
     char* ts = YAJL_GET_STRING(v);
     tileurl_ = std::string(ts);
 
-    // const char * type_path[] = { "data", "geometry_type", (const char *) 0 };
-    // v = yajl_tree_get(node, type_path, yajl_t_string);
-    // const char* type_c_str = YAJL_GET_STRING(v);
-    // std::clog << type_c_str << "\n";
+    const char * type_path[] = { "geometry_type", (const char *) 0 };
+    v = yajl_tree_get(node, type_path, yajl_t_string);
+    if (v != NULL) {
+      // const char* type_c_str = strdup(YAJL_GET_STRING(v));
+      // TODO: assign geometry type
+    } else {
+      std::clog << "geometry type undefined\n";
+    }
+
+    const char * fields_path[] = { "fields", (const char *) 0 };
+    v = yajl_tree_get(node, fields_path, yajl_t_object);
+    if (v != NULL) {
+      for (int i = 0; i < YAJL_GET_OBJECT(v)->len; i++) {
+        std::string ft = std::string(strdup(
+              YAJL_GET_STRING(YAJL_GET_OBJECT(v)->values[i])));
+        std::string fn = std::string(strdup(
+              YAJL_GET_OBJECT(v)->keys[i]));
+        if (ft == "string") {
+          desc_.add_descriptor(mapnik::attribute_descriptor(fn, mapnik::String));
+        }
+      }
+    } else {
+      std::clog << "fields undefined\n";
+    }
 
     // const char * extent_path[] = { "extent", (const char *) 0 };
     // v = yajl_tree_get(node, extent_path, yajl_t_array);

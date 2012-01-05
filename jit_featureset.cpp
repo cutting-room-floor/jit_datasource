@@ -208,14 +208,12 @@ jit_featureset::jit_featureset(
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
 
-    // FIXME: manually free
     hand = yajl_alloc(
         &callbacks, NULL,
         &state_bundle);
 
     yajl_config(hand, yajl_allow_comments, 1);
     yajl_config(hand, yajl_allow_trailing_garbage, 1);
-
 
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
     state_bundle.feature = feature;
