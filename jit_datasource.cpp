@@ -56,9 +56,9 @@ void jit_datasource::bind() const
     memcpy(blx, resp->data, resp->nbytes);
     blx[resp->nbytes] = '\0';
 
-    delete[] blx;
+    std::string tjstring = boost::trim_left_copy(std::string(blx));
 
-    std::string tjstring = boost::trim_left_copy(std::string(resp->data));
+    delete[] blx;
     char errbuf[1024];
     errbuf[0] = 0;
     yajl_val node;
