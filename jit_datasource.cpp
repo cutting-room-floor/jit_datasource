@@ -1,9 +1,24 @@
-// file plugin
-#include "jit_datasource.hpp"
-#include "jit_featureset.hpp"
-
-// curl
-#include "basiccurl.h"
+/*****************************************************************************
+ *
+ * This file is part of Mapnik (c++ mapping toolkit)
+ *
+ * Copyright (C) 2011 Artem Pavlenko
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ *****************************************************************************/
 
 // boost
 #include <boost/make_shared.hpp>
@@ -12,8 +27,18 @@
 // mapnik
 #include <mapnik/box2d.hpp>
 
+#include <string>
+#include <algorithm>
+
+// curl
+#include "./basiccurl.h"
+
 // yajl
 #include "yajl/yajl_tree.h"
+
+// file plugin
+#include "jit_datasource.hpp"
+#include "jit_featureset.hpp"
 
 using mapnik::datasource;
 using mapnik::parameters;
@@ -24,29 +49,27 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
     : datasource(params),
     type_(datasource::Vector),
     desc_(*params_.get<std::string>("type"),
-        *params_.get<std::string>("encoding","utf-8")),
-    url_(*params_.get<std::string>("url","")),
+        *params_.get<std::string>("encoding", "utf-8")),
+    url_(*params_.get<std::string>("url", "")),
     minzoom_(0),
     maxzoom_(10),
-    extent_()
-{
-    if (url_.empty()) throw mapnik::datasource_exception("JIT Plugin: missing <url> parameter");
-    if (bind)
-    {
+    extent_() {
+    if (url_.empty()) {
+      throw mapnik::datasource_exception("JIT Plugin: missing <url> parameter");
+    }
+    if (bind) {
         this->bind();
     }
 }
 
-void jit_datasource::bind() const
-{
+void jit_datasource::bind() const {
     if (is_bound_) return;
 
     std::clog << "binding on " << url_ << std::endl;
 
     CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
 
-    if ((resp == NULL) || (resp->nbytes == 0))
-    {
+    if ((resp == NULL) || (resp->nbytes == 0)) {
         throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
     }
 
@@ -91,7 +114,7 @@ void jit_datasource::bind() const
     // const char * extent_path[] = { "extent", (const char *) 0 };
     // v = yajl_tree_get(node, extent_path, yajl_t_array);
 
-    extent_.init(-20037508.34,-20037508.34,20037508.34,20037508.34);
+    extent_.init(-20037508.34, -20037508.34, 20037508.34, 20037508.34);
 
     is_bound_ = true;
 }
@@ -100,32 +123,27 @@ jit_datasource::~jit_datasource() { }
 
 std::string const jit_datasource::name_="jit";
 
-std::string jit_datasource::name()
-{
+std::string jit_datasource::name() {
     return name_;
 }
 
-int jit_datasource::type() const
-{
+int jit_datasource::type() const {
     return type_;
 }
 
-mapnik::box2d<double> jit_datasource::envelope() const
-{
+mapnik::box2d<double> jit_datasource::envelope() const {
     if (!is_bound_) bind();
 
     return extent_;
 }
 
-mapnik::layer_descriptor jit_datasource::get_descriptor() const
-{
+mapnik::layer_descriptor jit_datasource::get_descriptor() const {
     if (!is_bound_) bind();
 
     return desc_;
 }
 
-mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
-{
+mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     if (!is_bound_) bind();
 
     mapnik::box2d <double> bb = q.get_unbuffered_bbox();
@@ -140,8 +158,10 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     const double MAXEXTENT = 20037508.34;
     const double MERCA = 6378137;
     const double D2R = M_PI / 180.0;
-    double mercwidth = (MERCA * bb.maxx() * D2R) - (MERCA * bb.minx() * D2R);
-    double z = abs(ceil(-(std::log(mercwidth / MAXEXTENT) - std::log(2.0)) / std::log(2.0)));
+    double mercwidth = (MERCA * bb.maxx() * D2R) -
+      (MERCA * bb.minx() * D2R);
+    double z = abs(ceil(-(std::log(mercwidth / MAXEXTENT) -
+      std::log(2.0)) / std::log(2.0)));
 
     // Also bail early if the datasource indicates that there
     // will be no tiles here.
@@ -170,8 +190,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
     std::clog << "JIT: got " << thisurl_ << "\n";
 
-    if ((resp != NULL) && (resp->nbytes > 0))
-    {
+    if ((resp != NULL) && (resp->nbytes > 0)) {
         char *blx = new char[resp->nbytes + 1];
         memcpy(blx, resp->data, resp->nbytes);
         blx[resp->nbytes] = '\0';
@@ -182,9 +201,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
             q.get_bbox(),
             dstring,
             desc_.get_encoding());
-    }
-    else
-    {
+    } else {
         return mapnik::featureset_ptr();
     }
 
@@ -192,8 +209,8 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const
     return mapnik::featureset_ptr();
 }
 
-mapnik::featureset_ptr jit_datasource::features_at_point(mapnik::coord2d const& pt) const
-{
+mapnik::featureset_ptr
+jit_datasource::features_at_point(mapnik::coord2d const& pt) const {
     if (!is_bound_) bind();
 
     // features_at_point is rarely used - only by custom applications,
