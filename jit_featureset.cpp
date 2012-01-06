@@ -41,141 +41,150 @@ static int gj_start_map(void * ctx) {
 
 static int gj_map_key(void * ctx, const unsigned char* key, size_t t) {
     std::string key_ = std::string((const char*) key, t);
-    if (((fm *) ctx)->state == parser_in_properties) {
-        ((fm *) ctx)->property_name = key_;
+    fm *cs = static_cast<fm*>(ctx);
+    if (cs->state == parser_in_properties) {
+        cs->property_name = key_;
     } else {
         if (key_ == "features") {
-            ((fm *) ctx)->state = parser_in_features;
+            cs->state = parser_in_features;
         } else if (key_ == "geometry") {
-            ((fm *) ctx)->state = parser_in_geometry;
-        } else if ((((fm *) ctx)->state == parser_in_geometry) &&
+            cs->state = parser_in_geometry;
+        } else if ((cs->state == parser_in_geometry) &&
             (key_ == "type")) {
-            ((fm *) ctx)->state = parser_in_type;
+            cs->state = parser_in_type;
         } else if (key_ == "properties") {
-            ((fm *) ctx)->state = parser_in_properties;
+            cs->state = parser_in_properties;
         } else if (key_ == "coordinates") {
-            ((fm *) ctx)->state = parser_in_coordinates;
+            cs->state = parser_in_coordinates;
         }
     }
     return 1;
 }
 
 static int gj_end_map(void * ctx) {
-    if ((((fm *) ctx)->state == parser_in_properties) ||
-        (((fm *) ctx)->state == parser_in_geometry)) {
-        ((fm *) ctx)->state = parser_in_feature;
-    } else if (((fm *) ctx)->state == parser_in_feature) {
-        if (((fm *) ctx)->geometry_type == "Point") {
+    fm *cs = static_cast<fm*>(ctx);
+
+    if ((cs->state == parser_in_properties) ||
+        (cs->state == parser_in_geometry)) {
+        cs->state = parser_in_feature;
+    } else if (cs->state == parser_in_feature) {
+        if (cs->geometry_type == "Point") {
             mapnik::geometry_type * pt;
             pt = new mapnik::geometry_type(mapnik::Point);
             pt->move_to(
-                ((fm *) ctx)->point_cache.at(0).at(0),
-                ((fm *) ctx)->point_cache.at(0).at(1));
-            ((fm *) ctx)->feature->add_geometry(pt);
-        } else if (((fm *) ctx)->geometry_type == "LineString") {
+                cs->point_cache.at(0).at(0),
+                cs->point_cache.at(0).at(1));
+            cs->feature->add_geometry(pt);
+        } else if (cs->geometry_type == "LineString") {
             mapnik::geometry_type * pt;
             pt = new mapnik::geometry_type(mapnik::LineString);
 
-            pt->set_capacity(((fm *) ctx)->point_cache.at(0).size() / 2);
+            pt->set_capacity(cs->point_cache.at(0).size() / 2);
             pt->move_to(
-                ((fm *) ctx)->point_cache.at(0).at(0),
-                ((fm *) ctx)->point_cache.at(0).at(1));
+                cs->point_cache.at(0).at(0),
+                cs->point_cache.at(0).at(1));
 
             for (int i = 2;
-                i < ((fm *) ctx)->point_cache.at(0).size();
+                i < cs->point_cache.at(0).size();
                 i += 2) {
                 pt->line_to(
-                    ((fm *) ctx)->point_cache.at(0).at(i),
-                    ((fm *) ctx)->point_cache.at(0).at(i + 1));
+                    cs->point_cache.at(0).at(i),
+                    cs->point_cache.at(0).at(i + 1));
             }
-            ((fm *) ctx)->feature->add_geometry(pt);
-        } else if (((fm *) ctx)->geometry_type == "MultiLineString") {
+            cs->feature->add_geometry(pt);
+        } else if (cs->geometry_type == "MultiLineString") {
             mapnik::geometry_type * pt;
             pt = new mapnik::geometry_type(mapnik::MultiLineString);
 
-            for (int i = 0; i < ((fm *) ctx)->point_cache.size(); i++) {
-                pt->set_capacity(((fm *) ctx)->point_cache.at(i).size() / 2);
+            for (int i = 0; i < cs->point_cache.size(); i++) {
+                pt->set_capacity(cs->point_cache.at(i).size() / 2);
                 pt->move_to(
-                    ((fm *) ctx)->point_cache.at(i).at(0),
-                    ((fm *) ctx)->point_cache.at(i).at(1));
+                    cs->point_cache.at(i).at(0),
+                    cs->point_cache.at(i).at(1));
 
                 for (int j = 2;
-                    j < ((fm *) ctx)->point_cache.at(i).size();
+                    j < cs->point_cache.at(i).size();
                     j += 2) {
                     pt->line_to(
-                        ((fm *) ctx)->point_cache.at(i).at(j),
-                        ((fm *) ctx)->point_cache.at(i).at(j + 1));
+                        cs->point_cache.at(i).at(j),
+                        cs->point_cache.at(i).at(j + 1));
                 }
             }
-            ((fm *) ctx)->feature->add_geometry(pt);
+            cs->feature->add_geometry(pt);
         }
-        ((fm *) ctx)->state = parser_in_features;
-        ((fm *) ctx)->done = 1;
+        cs->state = parser_in_features;
+        cs->done = 1;
     }
     return 1;
 }
 
 static int gj_null(void * ctx) {
-    if (((fm *) ctx)->state == parser_in_properties) {
-        boost::put(*((fm *) ctx)->feature,
-            ((fm *) ctx)->property_name, mapnik::value_null());
+    fm *cs = static_cast<fm*>(ctx);
+    if (cs->state == parser_in_properties) {
+        boost::put(*(cs)->feature,
+            cs->property_name, mapnik::value_null());
     }
     return 1;
 }
 
 static int gj_boolean(void * ctx, int x) {
-    if (((fm *) ctx)->state == parser_in_properties) {
-        boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, x);
+    fm *cs = static_cast<fm*>(ctx);
+    if (cs->state == parser_in_properties) {
+        boost::put(*(cs)->feature, cs->property_name, x);
     }
     return 1;
 }
 
 static int gj_number(void * ctx, const char* str, size_t t) {
+    fm *cs = static_cast<fm*>(ctx);
     double x = strtod(str, NULL);
 
-    if (((fm *) ctx)->state == parser_in_coordinates) {
-        if (((fm *) ctx)->coord_dimensions == 2) {
-            ((fm *) ctx)->point_cache.at(0).push_back(x);
-        } else if (((fm *) ctx)->coord_dimensions == 3) {
-            ((fm *) ctx)->point_cache.back().push_back(x);
+    if (cs->state == parser_in_coordinates) {
+        if (cs->coord_dimensions == 2) {
+            cs->point_cache.at(0).push_back(x);
+        } else if (cs->coord_dimensions == 3) {
+            cs->point_cache.back().push_back(x);
         }
     }
-    if (((fm *) ctx)->state == parser_in_properties) {
-        boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, x);
+    if (cs->state == parser_in_properties) {
+        boost::put(*(cs)->feature, cs->property_name, x);
     }
     return 1;
 }
 
 static int gj_string(void * ctx, const unsigned char* str, size_t t) {
+    fm *cs = static_cast<fm*>(ctx);
     std::string str_ = std::string((const char*) str, t);
-    if (((fm *) ctx)->state == parser_in_type) {
-        ((fm *) ctx)->geometry_type = str_;
-    } else if (((fm *) ctx)->state == parser_in_properties) {
+    if (cs->state == parser_in_type) {
+        cs->geometry_type = str_;
+    } else if (cs->state == parser_in_properties) {
         UnicodeString ustr = tr->transcode(str_.c_str());
-        boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, ustr);
+        boost::put(*(cs)->feature, cs->property_name, ustr);
     }
     return 1;
 }
 
 static int gj_start_array(void * ctx) {
-    if (((fm *) ctx)->state == parser_in_coordinates) {
-        if (((fm *) ctx)->coord_dimensions == 1) {
+    fm *cs = static_cast<fm*>(ctx);
+    if (cs->state == parser_in_coordinates) {
+        if (cs->coord_dimensions == 1) {
             std::vector <double> sub_cache;
-            ((fm *) ctx)->point_cache.push_back(sub_cache);
+            cs->point_cache.push_back(sub_cache);
         }
-        ((fm *) ctx)->coord_dimensions++;
+        cs->coord_dimensions++;
     }
     return 1;
 }
 
 static int gj_end_array(void * ctx) {
-    if (((fm *) ctx)->state == parser_in_coordinates) {
-        ((fm *) ctx)->coord_dimensions--;
-        if (((fm *) ctx)->coord_dimensions < 1) {
-            ((fm *) ctx)->state = parser_in_geometry;
+    fm *cs = static_cast<fm*>(ctx);
+    if (cs->state == parser_in_coordinates) {
+        cs->coord_dimensions--;
+        if (cs->coord_dimensions < 1) {
+            cs->state = parser_in_geometry;
         }
-    } else if (((fm *) ctx)->state == parser_in_features) {
-        ((fm *) ctx)->state = parser_outside;
+    } else if (cs->state == parser_in_features) {
+        cs->state = parser_outside;
     }
     return 1;
 }
