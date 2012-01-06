@@ -75,6 +75,23 @@ static int gj_end_map(void * ctx) {
                 cs->point_cache.at(0).at(0),
                 cs->point_cache.at(0).at(1));
             cs->feature->add_geometry(pt);
+        } else if (cs->geometry_type == "Polygon") {
+            mapnik::geometry_type * pt;
+            pt = new mapnik::geometry_type(mapnik::Polygon);
+
+            pt->set_capacity(cs->point_cache.at(0).size() / 2);
+            pt->move_to(
+                cs->point_cache.at(0).at(0),
+                cs->point_cache.at(0).at(1));
+
+            for (int i = 2;
+                i < cs->point_cache.at(0).size();
+                i += 2) {
+                pt->line_to(
+                    cs->point_cache.at(0).at(i),
+                    cs->point_cache.at(0).at(i + 1));
+            }
+            cs->feature->add_geometry(pt);
         } else if (cs->geometry_type == "LineString") {
             mapnik::geometry_type * pt;
             pt = new mapnik::geometry_type(mapnik::LineString);
