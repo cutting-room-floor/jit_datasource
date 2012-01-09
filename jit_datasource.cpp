@@ -89,6 +89,7 @@ void jit_datasource::bind() const {
     std::string tjstring = boost::trim_left_copy(std::string(blx));
 
     delete[] blx;
+    free(resp->data);
     char errbuf[1024];
     errbuf[0] = 0;
     yajl_val node;
@@ -252,6 +253,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
         blx[resp->nbytes] = '\0';
         std::string dstring = std::string(blx);
         delete[] blx;
+        free(resp->data);
 
         return boost::make_shared<jit_featureset>(
             q.get_bbox(),
