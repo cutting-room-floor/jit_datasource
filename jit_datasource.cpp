@@ -41,6 +41,12 @@
 #include "jit_datasource.hpp"
 #include "jit_featureset.hpp"
 
+#ifdef MAPNIK_DEBUG
+#include <mapnik/timer.hpp>
+#include <iomanip>
+#include <sstream>
+#endif
+
 using mapnik::datasource;
 using mapnik::parameters;
 
@@ -70,19 +76,11 @@ void jit_datasource::bind() const {
     mapnik::projection const *_wgs84 = new mapnik::projection("+init=epsg:4326");
     mapnik::proj_transform const *transformer_ = new mapnik::proj_transform(*_merc, *_wgs84);
 
-#ifdef MAPNIK_DEBUG
-    std::clog << "binding on " << url_ << std::endl;
-#endif
-
     CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
 
     if ((resp == NULL) || (resp->nbytes == 0)) {
         throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
     }
-
-#ifdef MAPNIK_DEBUG
-    std::clog << "JIT: using curl response\n";
-#endif
 
     char *blx = new char[resp->nbytes + 1];
     memcpy(blx, resp->data, resp->nbytes);
@@ -124,7 +122,7 @@ void jit_datasource::bind() const {
       // const char* type_c_str = strdup(YAJL_GET_STRING(v));
       // TODO: assign geometry type
     } else {
-      std::clog << "geometry type undefined\n";
+      // std::clog << "geometry type undefined\n";
     }
 
     v = yajl_tree_get(node, fields_path, yajl_t_object);
@@ -139,7 +137,7 @@ void jit_datasource::bind() const {
         }
       }
     } else {
-      std::clog << "fields undefined\n";
+      // std::clog << "fields undefined\n";
     }
 
     v = yajl_tree_get(node, bounds_path, yajl_t_array);
@@ -149,7 +147,7 @@ void jit_datasource::bind() const {
           YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[1]),
           YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[2]),
           YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[3]));
-      
+
       transformer_->backward(latBox);
       extent_ = latBox;
     } else {
@@ -202,7 +200,9 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
         return mapnik::featureset_ptr();
     }
 
-    std::clog << "JIT Plugin: unbuffered bbox: " << bb << std::endl;
+#ifdef MAPNIK_DEBUG
+    // std::clog << "JIT Plugin: unbuffered bbox: " << bb << std::endl;
+#endif
 
     mapnik::coord2d c = bb.center();
 
@@ -217,7 +217,6 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     // Also bail early if the datasource indicates that there
     // will be no tiles here.
     if (z > maxzoom_ || z < minzoom_) {
-        std::clog << "JIT Datasource: bailing early because zoom is " << z << std::endl;
         return mapnik::featureset_ptr();
     }
 
@@ -239,11 +238,12 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
             "{y}", boost::lexical_cast<std::string>(ty));
 
 #ifdef MAPNIK_DEBUG
-    std::clog << "JIT: requesting " << thisurl_ << "\n";
+    mapnik::progress_timer download_timer(std::clog, "total download time");
 #endif
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 #ifdef MAPNIK_DEBUG
-    std::clog << "JIT: got " << thisurl_ << "\n";
+    download_timer.stop();
+    download_timer.discard();
 #endif
 
     if ((resp != NULL) && (resp->nbytes > 0)) {

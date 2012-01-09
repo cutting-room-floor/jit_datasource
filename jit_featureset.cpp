@@ -33,6 +33,12 @@
 
 #include "jit_featureset.hpp"
 
+#ifdef MAPNIK_DEBUG
+#include <mapnik/timer.hpp>
+#include <iomanip>
+#include <sstream>
+#endif
+
 mapnik::transcoder* tr = new mapnik::transcoder("utf-8");
 
 static int gj_start_map(void * ctx) {
@@ -138,7 +144,7 @@ static int gj_end_map(void * ctx) {
 static int gj_null(void * ctx) {
     fm *cs = static_cast<fm*>(ctx);
     if (cs->state == parser_in_properties) {
-        boost::put(*(cs)->feature,
+        boost::put(*(cs->feature),
             cs->property_name, mapnik::value_null());
     }
     return 1;
@@ -147,7 +153,7 @@ static int gj_null(void * ctx) {
 static int gj_boolean(void * ctx, int x) {
     fm *cs = static_cast<fm*>(ctx);
     if (cs->state == parser_in_properties) {
-        boost::put(*(cs)->feature, cs->property_name, x);
+        boost::put(*(cs->feature), cs->property_name, x);
     }
     return 1;
 }
@@ -164,7 +170,7 @@ static int gj_number(void * ctx, const char* str, size_t t) {
         }
     }
     if (cs->state == parser_in_properties) {
-        boost::put(*(cs)->feature, cs->property_name, x);
+        boost::put(*(cs->feature), cs->property_name, x);
     }
     return 1;
 }
@@ -176,7 +182,7 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t) {
         cs->geometry_type = str_;
     } else if (cs->state == parser_in_properties) {
         UnicodeString ustr = tr->transcode(str_.c_str());
-        boost::put(*(cs)->feature, cs->property_name, ustr);
+        boost::put(*(cs->feature), cs->property_name, ustr);
     }
     return 1;
 }
@@ -229,8 +235,6 @@ jit_featureset::jit_featureset(
       input_string_(input_string),
       tr_(new mapnik::transcoder(encoding)) {
 
-    std::clog << "starting and done is " << state_bundle.done << std::endl;
-
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
 
@@ -243,6 +247,10 @@ jit_featureset::jit_featureset(
 
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
     state_bundle.feature = feature;
+
+#ifdef MAPNIK_DEBUG
+    mapnik::progress_timer parse_timer(std::clog, "geojson parsing time");
+#endif
 
     for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
         int parse_result;
@@ -274,12 +282,13 @@ jit_featureset::jit_featureset(
     }
 
     yajl_free(hand);
-
-    std::clog << "JIT: done parsing features\n";
-    std::clog << "JIT: collected " << feature_id_ << " features\n";
-    std::clog << "JIT: itt ended at " << itt_ << " \n";
-
     feature_id_ = 0;
+
+#ifdef MAPNIK_DEBUG
+    parse_timer.stop();
+    parse_timer.discard();
+    // std::clog << "JIT: collected " << feature_id_ << " features\n";
+#endif
 }
 
 jit_featureset::~jit_featureset() { }
