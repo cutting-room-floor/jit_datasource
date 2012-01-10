@@ -25,5 +25,3 @@ JSON parsing.
 ## Authors
 
 * (tmcw) Tom MacWright
-
-Licensed LGPL
