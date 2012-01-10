@@ -72,9 +72,9 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
 void jit_datasource::bind() const {
     if (is_bound_) return;
 
-    mapnik::projection const *_merc =  new mapnik::projection(MERCATOR_PROJ4);
-    mapnik::projection const *_wgs84 = new mapnik::projection("+init=epsg:4326");
-    mapnik::proj_transform const *transformer_ = new mapnik::proj_transform(*_merc, *_wgs84);
+    mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
+    mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
+    mapnik::proj_transform transformer(merc, wgs84);
 
     CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
 
@@ -149,7 +149,7 @@ void jit_datasource::bind() const {
           YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[2]),
           YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[3]));
 
-      transformer_->backward(latBox);
+      transformer.backward(latBox);
       extent_ = latBox;
     } else {
 #ifdef MAPNIK_DEBUG
@@ -188,13 +188,13 @@ mapnik::layer_descriptor jit_datasource::get_descriptor() const {
 mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     if (!is_bound_) bind();
 
-    mapnik::projection const *_merc =  new mapnik::projection(MERCATOR_PROJ4);
-    mapnik::projection const *_wgs84 = new mapnik::projection("+init=epsg:4326");
-    mapnik::proj_transform const *transformer_ = new mapnik::proj_transform(*_merc, *_wgs84);
+    mapnik::projection const merc = mapnik::projection(MERCATOR_PROJ4);
+    mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
+    mapnik::proj_transform transformer(merc, wgs84);
 
     mapnik::box2d <double> bb = q.get_unbuffered_bbox();
 
-    transformer_->forward(bb);
+    transformer.forward(bb);
 
     if (bb.width() == 0) {
         // Invalid tiles mean we'll do dangerous math.
@@ -239,7 +239,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
             "{y}", boost::lexical_cast<std::string>(ty));
 
 #ifdef MAPNIK_DEBUG
-    mapnik::progress_timer download_timer(std::clog, "total download time");
+    mapnik::progress_timer download_timer(std::clog, "download");
 #endif
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 #ifdef MAPNIK_DEBUG

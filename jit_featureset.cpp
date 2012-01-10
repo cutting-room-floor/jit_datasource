@@ -77,6 +77,10 @@ static int gj_end_map(void * ctx) {
         if (cs->geometry_type == "Point") {
             mapnik::geometry_type * pt;
             pt = new mapnik::geometry_type(mapnik::Point);
+#ifdef MAPNIK_DEBUG
+            std::clog << "first dimension size: " << cs->point_cache.size() << std::endl;
+            std::clog << "second dimension size: " << cs->point_cache.at(0).size() << std::endl;
+#endif
             pt->move_to(
                 cs->point_cache.at(0).at(0),
                 cs->point_cache.at(0).at(1));
@@ -163,7 +167,9 @@ static int gj_number(void * ctx, const char* str, size_t t) {
     double x = strtod(str, NULL);
 
     if (cs->state == parser_in_coordinates) {
-        if (cs->coord_dimensions == 2) {
+        if (cs->coord_dimensions == 1) {
+            cs->point_cache.at(0).push_back(x);
+        } else if (cs->coord_dimensions == 2) {
             cs->point_cache.at(0).push_back(x);
         } else if (cs->coord_dimensions == 3) {
             cs->point_cache.back().push_back(x);
@@ -190,11 +196,11 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t) {
 static int gj_start_array(void * ctx) {
     fm *cs = static_cast<fm*>(ctx);
     if (cs->state == parser_in_coordinates) {
+        cs->coord_dimensions++;
         if (cs->coord_dimensions == 1) {
             std::vector <double> sub_cache;
             cs->point_cache.push_back(sub_cache);
         }
-        cs->coord_dimensions++;
     }
     return 1;
 }
@@ -249,12 +255,11 @@ jit_featureset::jit_featureset(
     state_bundle.feature = feature;
 
 #ifdef MAPNIK_DEBUG
-    mapnik::progress_timer parse_timer(std::clog, "geojson parsing time");
+    mapnik::progress_timer parse_timer(std::clog, "geojson");
 #endif
 
+    int parse_result;
     for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
-        int parse_result;
-
         parse_result = yajl_parse(hand,
                 (const unsigned char*) &input_string_[itt_], 1);
 
