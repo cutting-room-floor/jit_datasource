@@ -24,18 +24,21 @@ enum parser_state {
 };
 
 struct fm {
-    mapnik::feature_ptr feature;
     int done;
     int coord_dimensions;
     std::string property_name;
     std::string geometry_type;
+    mapnik::feature_ptr feature;
     mutable std::vector< std::vector<double> > point_cache;
     parser_state state;
     fm() :
         done(0),
         coord_dimensions(0),
         property_name(""),
-        geometry_type("")
+        geometry_type(""),
+        feature(),
+        point_cache(),
+        state()
     { }
 };
 
@@ -64,7 +67,7 @@ private:
     mutable std::vector<mapnik::feature_ptr> features_;
 
     // parsing related
-    int itt_;
+    unsigned itt_;
     yajl_handle hand;
     fm state_bundle;
 };

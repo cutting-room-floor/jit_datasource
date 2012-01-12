@@ -128,7 +128,7 @@ void jit_datasource::bind() const {
 
     v = yajl_tree_get(node, fields_path, yajl_t_object);
     if (v != NULL) {
-      for (int i = 0; i < YAJL_GET_OBJECT(v)->len; i++) {
+      for (unsigned i = 0; i < YAJL_GET_OBJECT(v)->len; i++) {
         std::string ft = std::string(strdup(
               YAJL_GET_STRING(YAJL_GET_OBJECT(v)->values[i])));
         std::string fn = std::string(strdup(

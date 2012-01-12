@@ -94,7 +94,7 @@ static int gj_end_map(void * ctx) {
                 cs->point_cache.at(0).at(0),
                 cs->point_cache.at(0).at(1));
 
-            for (int i = 2;
+            for (unsigned i = 2;
                 i < cs->point_cache.at(0).size();
                 i += 2) {
                 pt->line_to(
@@ -111,7 +111,7 @@ static int gj_end_map(void * ctx) {
                 cs->point_cache.at(0).at(0),
                 cs->point_cache.at(0).at(1));
 
-            for (int i = 2;
+            for (unsigned i = 2;
                 i < cs->point_cache.at(0).size();
                 i += 2) {
                 pt->line_to(
@@ -120,24 +120,23 @@ static int gj_end_map(void * ctx) {
             }
             cs->feature->add_geometry(pt);
         } else if (cs->geometry_type == "MultiLineString") {
-            mapnik::geometry_type * pt;
-            pt = new mapnik::geometry_type(mapnik::MultiLineString);
-
-            for (int i = 0; i < cs->point_cache.size(); i++) {
+            for (unsigned i = 0; i < cs->point_cache.size(); i++) {
+                mapnik::geometry_type * pt;
+                pt = new mapnik::geometry_type(mapnik::LineString);
                 pt->set_capacity(cs->point_cache.at(i).size() / 2);
                 pt->move_to(
                     cs->point_cache.at(i).at(0),
                     cs->point_cache.at(i).at(1));
 
-                for (int j = 2;
+                for (unsigned j = 2;
                     j < cs->point_cache.at(i).size();
                     j += 2) {
                     pt->line_to(
                         cs->point_cache.at(i).at(j),
                         cs->point_cache.at(i).at(j + 1));
                 }
+                cs->feature->add_geometry(pt);
             }
-            cs->feature->add_geometry(pt);
         }
         cs->state = parser_in_features;
         cs->done = 1;
@@ -239,7 +238,11 @@ jit_featureset::jit_featureset(
     : box_(box),
       feature_id_(1),
       input_string_(input_string),
-      tr_(new mapnik::transcoder(encoding)) {
+      tr_(new mapnik::transcoder(encoding)),
+      features_(),
+      itt_(),
+      hand(),
+      state_bundle() {
 
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
