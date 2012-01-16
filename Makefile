@@ -1,6 +1,6 @@
 CXX = clang++
 
-CXXFLAGS = -DMAPNIK_DEBUG -fPIC -O3 $(shell mapnik-config --cflags)
+CXXFLAGS = -DMAPNIK_DEBUG -fPIC -O0 -g $(shell mapnik-config --cflags)
 
 LIBS = -lcurl -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
 
@@ -27,7 +27,4 @@ clean:
 deploy:
 	cp jit.input $(shell mapnik-config --input-plugins)
 
-test:
-	./tile.js
-
-do: clean all deploy test
+do: clean all deploy

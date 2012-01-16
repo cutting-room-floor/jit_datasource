@@ -8,7 +8,8 @@ var mapnik = require('mapnik'),
     path = require('path'),
     port = 20020;
 
-var stylesheet = path.join(__dirname, 'test.xml');
+var testfile = 'test_tm.xml';
+var stylesheet = path.join(__dirname, testfile);
 
 
 try { var pool = require('generic-pool').Pool; } catch (e) {}
@@ -71,7 +72,7 @@ var acquire = function(id,options,callback) {
 };
 
 app.get('/:z/:x/:y.png', function(req, res, next){
-    acquire('test.xml', {}, function(err, map) {
+    acquire(testfile, {}, function(err, map) {
         if (err) {
             console.log(err);
         }
@@ -81,9 +82,10 @@ app.get('/:z/:x/:y.png', function(req, res, next){
             parseInt(req.params.z, 10), false);
         // render map
         var im = new mapnik.Image(map.width, map.height);
+        console.log(bbox);
         map.extent = bbox;
         map.render(im, function(err, im) {
-          maps.release('test.xml', map);
+          maps.release(testfile, map);
           if (err) {
             throw err;
           } else {

@@ -173,8 +173,7 @@ static int gj_number(void * ctx, const char* str, size_t t) {
         } else if (cs->coord_dimensions == 3) {
             cs->point_cache.back().push_back(x);
         }
-    }
-    if (cs->state == parser_in_properties) {
+    } else if (cs->state == parser_in_properties) {
         boost::put(*(cs->feature), cs->property_name, x);
     }
     return 1;
@@ -241,8 +240,12 @@ jit_featureset::jit_featureset(
       tr_(new mapnik::transcoder(encoding)),
       features_(),
       itt_(),
-      hand(),
-      state_bundle() {
+      hand()
+    {
+
+    std::clog << "Starting a tile.\n";
+
+    struct fm state_bundle;
 
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
@@ -289,23 +292,29 @@ jit_featureset::jit_featureset(
         }
     }
 
+    std::clog << "Freeing handle.\n";
     yajl_free(hand);
     feature_id_ = 0;
+    std::clog << "Done freeing handle.\n";
 
 #ifdef MAPNIK_DEBUG
     parse_timer.stop();
     parse_timer.discard();
-    // std::clog << "JIT: collected " << feature_id_ << " features\n";
 #endif
+    std::clog << "Done with tile\n";
 }
 
-jit_featureset::~jit_featureset() { }
+jit_featureset::~jit_featureset() {
+    std::clog << "disposing of featureset.\n";
+}
 
 mapnik::feature_ptr jit_featureset::next() {
+    std::clog << "in next()\n";
     feature_id_++;
     if (feature_id_ <= features_.size()) {
         return features_.at(feature_id_ - 1);
     } else {
+        std::clog << "done with next()\n";
         return mapnik::feature_ptr();
     }
 }

@@ -1,14 +1,9 @@
 #ifndef JIT_FEATURESET_HPP
 #define JIT_FEATURESET_HPP
 
-// mapnik
 #include <mapnik/datasource.hpp>
-
 #include "yajl/yajl_parse.h"
-
-// boost
 #include <boost/scoped_ptr.hpp>
-
 #include <vector>
 
 enum parser_state {
@@ -39,7 +34,7 @@ struct fm {
         feature(),
         point_cache(),
         state()
-    { }
+    { };
 };
 
 // extend the mapnik::Featureset defined in include/mapnik/datasource.hpp
@@ -59,17 +54,17 @@ public:
 
 private:
     // members are up to you, but these are recommended
-    mapnik::box2d<double> const& box_;
+    mapnik::box2d<double> box_;
     mutable int feature_id_;
     mutable std::string input_string_;
-    boost::scoped_ptr<mapnik::transcoder> tr_;
+    boost::shared_ptr<mapnik::transcoder> tr_;
 
     mutable std::vector<mapnik::feature_ptr> features_;
 
     // parsing related
     unsigned itt_;
     yajl_handle hand;
-    fm state_bundle;
+    // fm state_bundle;
 };
 
 #endif // HELLO_FEATURESET_HPP

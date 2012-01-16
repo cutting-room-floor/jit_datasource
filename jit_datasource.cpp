@@ -72,6 +72,8 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
 void jit_datasource::bind() const {
     if (is_bound_) return;
 
+    std::clog << "Rebinding to datasource\n";
+
     mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
     mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
     mapnik::proj_transform transformer(merc, wgs84);
