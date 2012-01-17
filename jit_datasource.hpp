@@ -1,5 +1,5 @@
-#ifndef FILE_DATASOURCE_HPP
-#define FILE_DATASOURCE_HPP
+#ifndef JIT_DATASOURCE_HPP
+#define JIT_DATASOURCE_HPP
 
 // mapnik
 #include <mapnik/datasource.hpp>

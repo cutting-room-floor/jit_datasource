@@ -72,7 +72,6 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
 void jit_datasource::bind() const {
     if (is_bound_) return;
 
-    std::clog << "Rebinding to datasource\n";
 
     mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
     mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
@@ -244,14 +243,7 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
             "{x}", boost::lexical_cast<std::string>(tx)),
             "{y}", boost::lexical_cast<std::string>(ty));
 
-#ifdef MAPNIK_DEBUG
-    mapnik::progress_timer download_timer(std::clog, "download");
-#endif
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
-#ifdef MAPNIK_DEBUG
-    download_timer.stop();
-    download_timer.discard();
-#endif
 
     if ((resp != NULL) && (resp->nbytes > 0)) {
         char *blx = new char[resp->nbytes + 1];

@@ -47,7 +47,7 @@ static int gj_start_map(void * ctx) {
 
 static int gj_map_key(void * ctx, const unsigned char* key, size_t t) {
     std::string key_ = std::string((const char*) key, t);
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
         cs->property_name = key_;
     } else {
@@ -68,7 +68,7 @@ static int gj_map_key(void * ctx, const unsigned char* key, size_t t) {
 }
 
 static int gj_end_map(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
 
     if ((cs->state == parser_in_properties) ||
         (cs->state == parser_in_geometry)) {
@@ -145,7 +145,7 @@ static int gj_end_map(void * ctx) {
 }
 
 static int gj_null(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
         boost::put(*(cs->feature),
             cs->property_name, mapnik::value_null());
@@ -154,7 +154,7 @@ static int gj_null(void * ctx) {
 }
 
 static int gj_boolean(void * ctx, int x) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
         boost::put(*(cs->feature), cs->property_name, x);
     }
@@ -162,7 +162,7 @@ static int gj_boolean(void * ctx, int x) {
 }
 
 static int gj_number(void * ctx, const char* str, size_t t) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     double x = strtod(str, NULL);
 
     if (cs->state == parser_in_coordinates) {
@@ -180,7 +180,7 @@ static int gj_number(void * ctx, const char* str, size_t t) {
 }
 
 static int gj_string(void * ctx, const unsigned char* str, size_t t) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     std::string str_ = std::string((const char*) str, t);
     if (cs->state == parser_in_type) {
         cs->geometry_type = str_;
@@ -192,7 +192,7 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t) {
 }
 
 static int gj_start_array(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_coordinates) {
         cs->coord_dimensions++;
         if (cs->coord_dimensions == 1) {
@@ -204,7 +204,7 @@ static int gj_start_array(void * ctx) {
 }
 
 static int gj_end_array(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_coordinates) {
         cs->coord_dimensions--;
         if (cs->coord_dimensions < 1) {
@@ -243,9 +243,7 @@ jit_featureset::jit_featureset(
       hand()
     {
 
-    std::clog << "Starting a tile.\n";
-
-    struct fm state_bundle;
+    struct pstate state_bundle;
 
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
@@ -259,10 +257,6 @@ jit_featureset::jit_featureset(
 
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
     state_bundle.feature = feature;
-
-#ifdef MAPNIK_DEBUG
-    mapnik::progress_timer parse_timer(std::clog, "geojson");
-#endif
 
     int parse_result;
     for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
@@ -292,29 +286,17 @@ jit_featureset::jit_featureset(
         }
     }
 
-    std::clog << "Freeing handle.\n";
     yajl_free(hand);
     feature_id_ = 0;
-    std::clog << "Done freeing handle.\n";
-
-#ifdef MAPNIK_DEBUG
-    parse_timer.stop();
-    parse_timer.discard();
-#endif
-    std::clog << "Done with tile\n";
 }
 
-jit_featureset::~jit_featureset() {
-    std::clog << "disposing of featureset.\n";
-}
+jit_featureset::~jit_featureset() { }
 
 mapnik::feature_ptr jit_featureset::next() {
-    std::clog << "in next()\n";
     feature_id_++;
     if (feature_id_ <= features_.size()) {
         return features_.at(feature_id_ - 1);
     } else {
-        std::clog << "done with next()\n";
         return mapnik::feature_ptr();
     }
 }

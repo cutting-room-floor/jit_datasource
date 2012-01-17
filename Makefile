@@ -1,4 +1,4 @@
-CXX = g++
+CXX = clang++
 
 CXXFLAGS = -DMAPNIK_DEBUG -fPIC -O0 -g $(shell mapnik-config --cflags)
 
