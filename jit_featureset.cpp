@@ -47,7 +47,7 @@ static int gj_start_map(void * ctx) {
 
 static int gj_map_key(void * ctx, const unsigned char* key, size_t t) {
     std::string key_ = std::string((const char*) key, t);
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
         cs->property_name = key_;
     } else {
@@ -68,7 +68,7 @@ static int gj_map_key(void * ctx, const unsigned char* key, size_t t) {
 }
 
 static int gj_end_map(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
 
     if ((cs->state == parser_in_properties) ||
         (cs->state == parser_in_geometry)) {
@@ -145,7 +145,7 @@ static int gj_end_map(void * ctx) {
 }
 
 static int gj_null(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
         boost::put(*(cs->feature),
             cs->property_name, mapnik::value_null());
@@ -154,7 +154,7 @@ static int gj_null(void * ctx) {
 }
 
 static int gj_boolean(void * ctx, int x) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
         boost::put(*(cs->feature), cs->property_name, x);
     }
@@ -162,7 +162,7 @@ static int gj_boolean(void * ctx, int x) {
 }
 
 static int gj_number(void * ctx, const char* str, size_t t) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     double x = strtod(str, NULL);
 
     if (cs->state == parser_in_coordinates) {
@@ -180,7 +180,7 @@ static int gj_number(void * ctx, const char* str, size_t t) {
 }
 
 static int gj_string(void * ctx, const unsigned char* str, size_t t) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     std::string str_ = std::string((const char*) str, t);
     if (cs->state == parser_in_type) {
         cs->geometry_type = str_;
@@ -192,7 +192,7 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t) {
 }
 
 static int gj_start_array(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_coordinates) {
         cs->coord_dimensions++;
         if (cs->coord_dimensions == 1) {
@@ -204,7 +204,7 @@ static int gj_start_array(void * ctx) {
 }
 
 static int gj_end_array(void * ctx) {
-    fm *cs = static_cast<fm*>(ctx);
+    pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_coordinates) {
         cs->coord_dimensions--;
         if (cs->coord_dimensions < 1) {
@@ -243,7 +243,7 @@ jit_featureset::jit_featureset(
       hand()
     {
 
-    struct fm state_bundle;
+    struct pstate state_bundle;
 
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
