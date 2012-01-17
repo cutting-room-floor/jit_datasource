@@ -18,7 +18,7 @@ enum parser_state {
     parser_in_type
 };
 
-struct pstate {
+struct fm {
     int done;
     int coord_dimensions;
     std::string property_name;
@@ -26,7 +26,7 @@ struct pstate {
     mapnik::feature_ptr feature;
     std::vector< std::vector<double> > point_cache;
     parser_state state;
-    pstate() :
+    fm() :
         done(0),
         coord_dimensions(0),
         property_name(""),
