@@ -56,4 +56,4 @@ private:
     yajl_handle hand;
 };
 
-#endif // HELLO_FEATURESET_HPP
+#endif // JIT_FEATURESET_HPP

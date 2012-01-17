@@ -22,7 +22,6 @@
 // mapnik
 #include <mapnik/feature_factory.hpp>
 #include <mapnik/geometry.hpp>
-
 #include <mapnik/util/geometry_to_wkt.hpp>
 
 #include <string>
@@ -30,7 +29,6 @@
 
 // yajl
 #include "yajl/yajl_parse.h"
-
 #include "jit_featureset.hpp"
 
 #ifdef MAPNIK_DEBUG
@@ -240,8 +238,7 @@ jit_featureset::jit_featureset(
       tr_(new mapnik::transcoder(encoding)),
       features_(),
       itt_(),
-      hand()
-    {
+      hand() {
 
     struct pstate state_bundle;
 
