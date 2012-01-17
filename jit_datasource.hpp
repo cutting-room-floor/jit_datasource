@@ -12,11 +12,12 @@ public:
     // constructor
     jit_datasource(mapnik::parameters const& params, bool bind=true);
     virtual ~jit_datasource ();
-    int type() const;
+    mapnik::datasource::datasource_t type() const;
     static std::string name();
     mapnik::featureset_ptr features(mapnik::query const& q) const;
     mapnik::featureset_ptr features_at_point(mapnik::coord2d const& pt) const;
     mapnik::box2d<double> envelope() const;
+    boost::optional<mapnik::datasource::geometry_t> get_geometry_type() const;
     mapnik::layer_descriptor get_descriptor() const;
     void bind() const;
 
@@ -24,7 +25,7 @@ private:
     // recommended naming convention of datasource members:
     // name_, type_, extent_, and desc_
     static const std::string name_;
-    int type_;
+    mapnik::datasource::datasource_t type_;
     mutable mapnik::layer_descriptor desc_;
     mutable std::string url_;
     mutable std::string tileurl_;

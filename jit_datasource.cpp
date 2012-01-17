@@ -171,7 +171,7 @@ std::string jit_datasource::name() {
     return name_;
 }
 
-int jit_datasource::type() const {
+mapnik::datasource::datasource_t jit_datasource::type() const {
     return type_;
 }
 
@@ -179,6 +179,10 @@ mapnik::box2d<double> jit_datasource::envelope() const {
     if (!is_bound_) bind();
 
     return extent_;
+}
+
+boost::optional<mapnik::datasource::geometry_t> jit_datasource::get_geometry_type() const {
+    return boost::optional<mapnik::datasource::geometry_t>();
 }
 
 mapnik::layer_descriptor jit_datasource::get_descriptor() const {
