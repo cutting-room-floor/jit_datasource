@@ -24,7 +24,7 @@ struct fm {
     std::string property_name;
     std::string geometry_type;
     mapnik::feature_ptr feature;
-    mutable std::vector< std::vector<double> > point_cache;
+    std::vector< std::vector<double> > point_cache;
     parser_state state;
     fm() :
         done(0),
