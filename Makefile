@@ -2,7 +2,7 @@ CXX = clang++
 
 CXXFLAGS = -DMAPNIK_DEBUG -fPIC -O0 -g $(shell mapnik-config --cflags)
 
-LIBS = -lcurl -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
+LIBS = -lfreetype -lcurl -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
 
 SRC = $(wildcard *.cpp)
 
