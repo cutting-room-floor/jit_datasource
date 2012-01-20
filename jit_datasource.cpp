@@ -72,9 +72,20 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
 void jit_datasource::bind() const {
     if (is_bound_) return;
 
-
     mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
     mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
+    char errbuf[1024];
+
+    std::map<std::string, mapnik::parameters> statistics_;
+
+    // Paths for yajl
+    const char * minzoom_path[] = { "minzoom", (const char *) 0 };
+    const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
+    const char * vectors_path[] = { "vectors", (const char *) 0 };
+    const char * type_path[] = { "geometry_type", (const char *) 0 };
+    const char * bounds_path[] = { "bounds", (const char *) 0 };
+    const char * statistics_path[] = { "statistics", (const char *) 0 };
+
     mapnik::proj_transform transformer(merc, wgs84);
 
     CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
@@ -91,7 +102,6 @@ void jit_datasource::bind() const {
 
     delete[] blx;
     free(resp->data);
-    char errbuf[1024];
     errbuf[0] = 0;
     yajl_val node;
     yajl_val v;
@@ -101,13 +111,6 @@ void jit_datasource::bind() const {
     if (node == NULL) {
         throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint invalid.");
     }
-
-    const char * minzoom_path[] = { "minzoom", (const char *) 0 };
-    const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
-    const char * vectors_path[] = { "vectors", (const char *) 0 };
-    const char * type_path[] = { "geometry_type", (const char *) 0 };
-    const char * fields_path[] = { "fields", (const char *) 0 };
-    const char * bounds_path[] = { "bounds", (const char *) 0 };
 
     v = yajl_tree_get(node, minzoom_path, yajl_t_number);
     minzoom_ = YAJL_GET_INTEGER(v);
@@ -127,19 +130,34 @@ void jit_datasource::bind() const {
       // std::clog << "geometry type undefined\n";
     }
 
-    v = yajl_tree_get(node, fields_path, yajl_t_object);
+    v = yajl_tree_get(node, statistics_path, yajl_t_object);
     if (v != NULL) {
-      for (unsigned i = 0; i < YAJL_GET_OBJECT(v)->len; i++) {
-        std::string ft = std::string(strdup(
-              YAJL_GET_STRING(YAJL_GET_OBJECT(v)->values[i])));
-        std::string fn = std::string(strdup(
-              YAJL_GET_OBJECT(v)->keys[i]));
-        if (ft == "string") {
-          desc_.add_descriptor(mapnik::attribute_descriptor(fn, mapnik::String));
+        std::clog << "statistics defined\n";
+        for (unsigned i = 0; i < YAJL_GET_OBJECT(v)->len; i++) {
+            // std::string ft = std::string(strdup(
+            //       YAJL_GET_STRING(YAJL_GET_OBJECT(v)->values[i])));
+            std::string field_name = std::string(strdup(
+                  YAJL_GET_OBJECT(v)->keys[i]));
+
+            mapnik::parameters field_parameters;
+            yajl_val field_stats_obj;
+            field_stats_obj = YAJL_GET_OBJECT(v)->values[i];
+
+            if (field_stats_obj != NULL && YAJL_IS_OBJECT(field_stats_obj)) {
+                for (unsigned j = 0; j < YAJL_GET_OBJECT(field_stats_obj)->len; j++) {
+                    std::string stat_name = std::string(strdup(
+                          YAJL_GET_OBJECT(field_stats_obj)->keys[j]));
+
+                    if (YAJL_IS_NUMBER(YAJL_GET_OBJECT(field_stats_obj)->values[j])) {
+                        double val = strtod(YAJL_GET_NUMBER(YAJL_GET_OBJECT(field_stats_obj)->values[j]), NULL);
+                        field_parameters[stat_name] = val;
+                    }
+                }
+            }
+            statistics_.insert(std::pair<std::string, mapnik::parameters>(field_name, field_parameters));
         }
-      }
     } else {
-      // std::clog << "fields undefined\n";
+        std::clog << "statistics undefined\n";
     }
 
     v = yajl_tree_get(node, bounds_path, yajl_t_array);
@@ -176,7 +194,6 @@ mapnik::datasource::datasource_t jit_datasource::type() const {
 
 mapnik::box2d<double> jit_datasource::envelope() const {
     if (!is_bound_) bind();
-
     return extent_;
 }
 
@@ -186,8 +203,11 @@ boost::optional<mapnik::datasource::geometry_t> jit_datasource::get_geometry_typ
 
 mapnik::layer_descriptor jit_datasource::get_descriptor() const {
     if (!is_bound_) bind();
-
     return desc_;
+}
+
+std::map<std::string, mapnik::parameters> jit_datasource::get_statistics() const {
+    return statistics_;
 }
 
 mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {

@@ -1,8 +1,10 @@
 {
     "statistics": {
-        "minimum": -10,
-        "maximum": 17,
-        "average": 2.777
+        "z_order": {
+            "minimum": -10,
+            "maximum": 17,
+            "average": 2.777
+        }
     },
     "center":[0,0,5],
     "id":"osm.road",
