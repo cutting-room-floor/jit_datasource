@@ -4,8 +4,10 @@
 
 import BaseHTTPServer, json, re
 
+view_json = json.load(open('view.json', 'r'))
+
 def serve_view(s):
-    s.wfile.write(json.dumps({}))
+    s.wfile.write(json.dumps(view_json))
 
 def serve_tile(s):
     s.wfile.write(json.dumps({ "type": "FeatureCollection" }))

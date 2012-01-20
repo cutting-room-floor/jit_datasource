@@ -1,0 +1,21 @@
+{
+    "statistics": {
+        "minimum": -10,
+        "maximum": 17,
+        "average": 2.777
+    },
+    "center":[0,0,5],
+    "id":"osm.road",
+    "scheme":"xyz",
+    "name":"OpenStreetMap Roads",
+    "type":"data",
+    "description":"Roads from OpenStreetMap",
+    "version":"2.0.0",
+    "bounds":[-180,-85,180,85],
+    "data":{"geometry_type":"linestring"},
+    "query":"<% if (z >= 5 && z <= 8) { %>\n\nSELECT type, name, bridge, tunnel,\nST_AsGeoJSON(\n    ST_Intersection(\n        geometry,\n        SetSRID('BOX3D(<%= box3d %>)'::box3d, 900913)), 8)\nAS geometry\nFROM osm_mainroads_gen1\nWHERE geometry && SetSRID('BOX3D(<%= box3d %>)'::box3d, 900913);\n\n<% } else if (z >=9 && z <=10) { %>\n\nselect type, name, bridge, tunnel, class,\nST_AsGeoJSON(\n    ST_Intersection(\n        geometry,\n        SetSRID('BOX3D(<%= box3d %>)'::box3d, 900913)), 8)\nAS geometry\nFROM osm_roads_gen1\nWHERE geometry && SetSRID('BOX3D(<%= box3d %>)'::box3d, 900913);\n\n<% } else if (z >= 11) { %>\n\nselect type, name, tunnel, class,\nST_AsGeoJSON(\n    ST_Intersection(\n        geometry,\n        SetSRID('BOX3D(<%= box3d %>)'::box3d, 900913)), 8) AS geometry\nFROM osm_roads\nWHERE geometry && SetSRID('BOX3D(<%= box3d %>)'::box3d, 900913)\norder by z_order;\n\n<% } %>\n",
+    "minzoom":5,
+    "maxzoom":20,
+    "vectors":"http://ssd.local/view/osm.road/{z}/{x}/{y}.geojson",
+    "link":"http://ssd.local/view/osm.road.json"
+}
