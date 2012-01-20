@@ -76,7 +76,7 @@ void jit_datasource::bind() const {
     mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
     char errbuf[1024];
 
-    std::map<std::string, mapnik::parameters> statistics_;
+    // std::map<std::string, mapnik::parameters> statistics_;
 
     // Paths for yajl
     const char * minzoom_path[] = { "minzoom", (const char *) 0 };

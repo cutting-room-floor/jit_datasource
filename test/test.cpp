@@ -20,6 +20,7 @@ int main (int argc , char** argv) {
         datasource_cache::instance()->register_datasources("/usr/local/lib/mapnik/input");
         freetype_engine::register_font("/usr/local/lib/mapnik/fonts");
 
+        /*
         Map m(256, 256);
         mapnik::load_map(m, "test_tm.xml", false);
 
@@ -34,6 +35,8 @@ int main (int argc , char** argv) {
 
         save_to_file<image_data_32>(buf.data(),"demo.png","png");
         std::clog << "demo.png written.\n";
+
+        */
 
         parameters p;
         p["type"] = "jit";
@@ -68,7 +71,11 @@ int main (int argc , char** argv) {
         std::map<std::string, mapnik::parameters>::iterator it;
 
         for (it = stats.begin(); it != stats.end(); it++) {
-            std::clog << "got stats entry" << std::endl;
+            std::clog << "name: " << it->first << std::endl;
+            parameters::const_iterator k = it->second.begin();
+            for (; k != it->second.end(); ++k) {
+                std::clog << "  " << k->first << " = " << k->second << "\n";
+            }
         }
     }
     catch ( const mapnik::config_error & ex ) {

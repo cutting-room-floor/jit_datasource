@@ -27,7 +27,7 @@ private:
     // name_, type_, extent_, and desc_
     static const std::string name_;
     mapnik::datasource::datasource_t type_;
-    std::map<std::string, mapnik::parameters> statistics_;
+    mutable std::map<std::string, mapnik::parameters> statistics_;
     mutable mapnik::layer_descriptor desc_;
     mutable std::string url_;
     mutable std::string tileurl_;
