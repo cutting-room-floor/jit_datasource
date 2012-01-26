@@ -27,4 +27,4 @@ clean:
 deploy:
 	cp jit.input $(shell mapnik-config --input-plugins)
 
-do: clean all deploy
+install: clean all deploy
