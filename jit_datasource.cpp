@@ -23,6 +23,7 @@
 // boost
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/asio.hpp>
 
 // mapnik
 #include <mapnik/box2d.hpp>
@@ -32,7 +33,7 @@
 #include <algorithm>
 
 // curl
-#include "./basiccurl.h"
+// #include "./basiccurl.h"
 
 // yajl
 #include "yajl/yajl_tree.h"
@@ -49,6 +50,7 @@
 
 using mapnik::datasource;
 using mapnik::parameters;
+using boost::asio::ip::tcp;
 
 DATASOURCE_PLUGIN(jit_datasource)
 
@@ -66,6 +68,63 @@ jit_datasource::jit_datasource(parameters const& params, bool bind)
     }
     if (bind) {
         this->bind();
+    }
+}
+
+std::string get_url(std::string url) {
+    try {
+        boost::asio::io_service io_service;
+        // Get a list of endpoints corresponding to the server name.
+        tcp::resolver resolver(io_service);
+        tcp::resolver::query query(url, "http");
+        tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+
+        // Try each endpoint until we successfully establish a connection.
+        tcp::socket socket(io_service);
+        boost::asio::connect(socket, endpoint_iterator);
+
+        // Form the request. We specify the "Connection: close" header so that the
+        // server will close the socket after transmitting the response. This will
+        // allow us to treat all data up until the EOF as the content.
+        boost::asio::streambuf request;
+        std::ostream request_stream(&request);
+        request_stream << "GET " << argv[2] << " HTTP/1.0\r\n";
+        request_stream << "Host: " << argv[1] << "\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        // Send the request.
+        boost::asio::write(socket, request);
+
+        // Read the response status line. The response streambuf will automatically
+        // grow to accommodate the entire line. The growth may be limited by passing
+        // a maximum size to the streambuf constructor.
+        boost::asio::streambuf response;
+        boost::asio::read_until(socket, response, "\r\n");
+
+        // Check that response is OK.
+        std::istream response_stream(&response);
+        std::string http_version;
+        response_stream >> http_version;
+        unsigned int status_code;
+        response_stream >> status_code;
+        std::string status_message;
+        std::getline(response_stream, status_message);
+        if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
+          std::cout << "Invalid response\n";
+          return 1;
+        }
+        if (status_code >= 300) {
+          std::cout << "Response returned with status code " << status_code << "\n";
+          return 1;
+        }
+
+        // Read the response headers, which are terminated by a blank line.
+        boost::asio::read_until(socket, response, "\r\n\r\n");
+
+        return response;
+    } catch(std::exception& e) {
+        throw mapnik::datasource_exception("JIT Plugin: HTTP Fetch Failed");
     }
 }
 
@@ -88,17 +147,8 @@ void jit_datasource::bind() const {
 
     mapnik::proj_transform transformer(merc, wgs84);
 
-    CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
-
-    if ((resp == NULL) || (resp->nbytes == 0)) {
-        throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
-    }
-
-    char *blx = new char[resp->nbytes + 1];
-    memcpy(blx, resp->data, resp->nbytes);
-    blx[resp->nbytes] = '\0';
-
-    std::string tjstring = boost::trim_left_copy(std::string(blx));
+    std::string resp = get_url(url_);
+    std::string tjstring = boost::trim_left_copy(std::string(resp));
 
     delete[] blx;
     free(resp->data);
