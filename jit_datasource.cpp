@@ -42,7 +42,7 @@
 #include "jit_featureset.hpp"
 
 #ifdef MAPNIK_DEBUG
-#include <mapnik/timer.hpp>
+//#include <mapnik/timer.hpp>
 #include <iomanip>
 #include <sstream>
 #endif
@@ -73,7 +73,8 @@ void jit_datasource::bind() const {
     if (is_bound_) return;
 
     mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
-    mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
+    //mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
+    mapnik::projection const wgs84 = mapnik::projection("+proj=lonlat +datum=WGS84");
     char errbuf[1024];
 
     // std::map<std::string, mapnik::parameters> statistics_;
@@ -94,13 +95,13 @@ void jit_datasource::bind() const {
         throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
     }
 
-    char *blx = new char[resp->nbytes + 1];
-    memcpy(blx, resp->data, resp->nbytes);
-    blx[resp->nbytes] = '\0';
+    //char *blx = new char[resp->nbytes + 1];
+    //memcpy(blx, resp->data, resp->nbytes);
+    //blx[resp->nbytes] = '\0';
 
-    std::string tjstring = boost::trim_left_copy(std::string(blx));
+    std::string tjstring = boost::trim_left_copy(std::string(resp->data,resp->nbytes));
 
-    delete[] blx;
+    //delete[] blx;
     free(resp->data);
     errbuf[0] = 0;
     yajl_val node;
@@ -121,7 +122,6 @@ void jit_datasource::bind() const {
     v = yajl_tree_get(node, vectors_path, yajl_t_string);
     char* ts = YAJL_GET_STRING(v);
     tileurl_ = std::string(ts);
-
     v = yajl_tree_get(node, type_path, yajl_t_string);
     if (v != NULL) {
       // const char* type_c_str = strdup(YAJL_GET_STRING(v));
@@ -214,7 +214,8 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     if (!is_bound_) bind();
 
     mapnik::projection const merc = mapnik::projection(MERCATOR_PROJ4);
-    mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
+    //mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
+    mapnik::projection const wgs84 = mapnik::projection("+proj=lonlat +datum=WGS84");
     mapnik::proj_transform transformer(merc, wgs84);
 
     mapnik::box2d <double> bb = q.get_unbuffered_bbox();
@@ -266,13 +267,12 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
 
     if ((resp != NULL) && (resp->nbytes > 0)) {
-        char *blx = new char[resp->nbytes + 1];
-        memcpy(blx, resp->data, resp->nbytes);
-        blx[resp->nbytes] = '\0';
-        std::string dstring = std::string(blx);
-        delete[] blx;
+        //char *blx = new char[resp->nbytes + 1];
+        //memcpy(blx, resp->data, resp->nbytes);
+        //blx[resp->nbytes] = '\0';
+        std::string dstring(resp->data,resp->nbytes);
+        //delete[] blx;
         free(resp->data);
-
         return boost::make_shared<jit_featureset>(
             q.get_bbox(),
             dstring,

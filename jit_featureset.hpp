@@ -24,6 +24,7 @@ struct pstate {
     std::string property_name;
     std::string geometry_type;
     mapnik::feature_ptr feature;
+    boost::scoped_ptr<mapnik::transcoder> tr;
     std::vector< std::vector<double> > point_cache;
     parser_state state;
     pstate() :
@@ -32,16 +33,17 @@ struct pstate {
         property_name(""),
         geometry_type(""),
         feature(),
+        tr(new mapnik::transcoder("utf-8")),
         point_cache(),
         state()
-    { };
+    { }
 };
 
 class jit_featureset : public mapnik::Featureset
 {
 public:
     jit_featureset(mapnik::box2d<double> const& box,
-            std::string input_string,
+            std::string const& input_string,
             std::string const& encoding);
     virtual ~jit_featureset();
     mapnik::feature_ptr next();

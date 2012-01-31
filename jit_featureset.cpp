@@ -32,16 +32,15 @@
 #include "jit_featureset.hpp"
 
 #ifdef MAPNIK_DEBUG
-#include <mapnik/timer.hpp>
+//#include <mapnik/timer.hpp>
 #include <iomanip>
 #include <sstream>
 #endif
 
-mapnik::transcoder* tr = new mapnik::transcoder("utf-8");
-
 static int gj_start_map(void * ctx) {
     return 1;
 }
+//////////////
 
 static int gj_map_key(void * ctx, const unsigned char* key, size_t t) {
     std::string key_ = std::string((const char*) key, t);
@@ -145,8 +144,7 @@ static int gj_end_map(void * ctx) {
 static int gj_null(void * ctx) {
     pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
-        boost::put(*(cs->feature),
-            cs->property_name, mapnik::value_null());
+        cs->feature->put_new(cs->property_name, mapnik::value_null());
     }
     return 1;
 }
@@ -154,7 +152,7 @@ static int gj_null(void * ctx) {
 static int gj_boolean(void * ctx, int x) {
     pstate *cs = static_cast<pstate*>(ctx);
     if (cs->state == parser_in_properties) {
-        boost::put(*(cs->feature), cs->property_name, x);
+        cs->feature->put_new(cs->property_name, x);
     }
     return 1;
 }
@@ -172,7 +170,7 @@ static int gj_number(void * ctx, const char* str, size_t t) {
             cs->point_cache.back().push_back(x);
         }
     } else if (cs->state == parser_in_properties) {
-        boost::put(*(cs->feature), cs->property_name, x);
+        cs->feature->put_new(cs->property_name, x);
     }
     return 1;
 }
@@ -183,8 +181,8 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t) {
     if (cs->state == parser_in_type) {
         cs->geometry_type = str_;
     } else if (cs->state == parser_in_properties) {
-        UnicodeString ustr = tr->transcode(str_.c_str());
-        boost::put(*(cs->feature), cs->property_name, ustr);
+        UnicodeString ustr = cs->tr->transcode(str_.c_str());
+        cs->feature->put_new(cs->property_name, ustr);
     }
     return 1;
 }
@@ -230,7 +228,7 @@ static yajl_callbacks callbacks = {
 
 jit_featureset::jit_featureset(
     mapnik::box2d<double> const& box,
-    std::string input_string,
+    std::string const& input_string,
     std::string const& encoding)
     : box_(box),
       feature_id_(1),
@@ -240,7 +238,7 @@ jit_featureset::jit_featureset(
       itt_(),
       hand() {
 
-    struct pstate state_bundle;
+    pstate state_bundle;
 
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
@@ -251,30 +249,29 @@ jit_featureset::jit_featureset(
 
     yajl_config(hand, yajl_allow_comments, 1);
     yajl_config(hand, yajl_allow_trailing_garbage, 1);
-
-    mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
+    mapnik::context_ptr ctx=boost::make_shared<mapnik::context_type>();
+    mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx,feature_id_));
     state_bundle.feature = feature;
 
     int parse_result;
     for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
+        
         parse_result = yajl_parse(hand,
-                (const unsigned char*) &input_string_[itt_], 1);
-
+                                  (const unsigned char *)&input_string_[itt_], 1);
+    
         if (parse_result == yajl_status_error) {
             unsigned char *str = yajl_get_error(hand,
-                1,  (const unsigned char*) input_string_.c_str(),
-                input_string_.length());
+                                                1,  (const unsigned char*) input_string_.c_str(),
+                                                input_string_.length());
             std::ostringstream errmsg;
             errmsg << "GeoJSON Plugin: invalid GeoJSON detected: " << (const char*) str << "\n";
             yajl_free_error(hand, str);
             throw mapnik::datasource_exception(errmsg.str());
         } else if (state_bundle.done == 1) {
             features_.push_back(state_bundle.feature);
-
-            feature_id_++;
             mapnik::feature_ptr
-              feature(mapnik::feature_factory::create(feature_id_));
-
+                feature(mapnik::feature_factory::create(ctx,feature_id_++));
+        
             // reset
             state_bundle.point_cache.clear();
             state_bundle.done = 0;
@@ -282,7 +279,7 @@ jit_featureset::jit_featureset(
             state_bundle.feature = feature;
         }
     }
-
+    
     yajl_free(hand);
     feature_id_ = 0;
 }
