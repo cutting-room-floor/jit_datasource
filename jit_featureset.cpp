@@ -24,6 +24,7 @@
 #include <mapnik/geometry.hpp>
 #include <mapnik/util/geometry_to_wkt.hpp>
 #include "spherical_mercator.hpp"
+#include "downloader.hpp"
 
 #include <string>
 #include <vector>
@@ -265,8 +266,27 @@ jit_featureset::jit_featureset(
     std::cerr << minx << "<->" << maxx << "  " << miny <<"<->" << maxy << std::endl;    
     
     std::vector<std::string> json_input;
-    
     int count=0;
+#if 1
+    {
+        mapnik::tile_downloader downloader(json_input); // RAII
+        for ( int x = minx; x < maxx; ++x)
+        {
+            for (int y = miny; y < maxy; ++y)
+            {               
+                std::string url = boost::replace_all_copy(
+                    boost::replace_all_copy(boost::replace_all_copy(tileurl,
+                    "{z}", boost::lexical_cast<std::string>(zoom)),
+                    "{x}", boost::lexical_cast<std::string>(x)),
+                    "{y}", boost::lexical_cast<std::string>(y));
+                downloader.push(boost::protect(boost::bind(&mapnik::download_handler::sync_start, _1, url)));
+                ++count;
+            }        
+        }
+    }
+
+#else
+    
     {
         for ( int x = minx; x < maxx; ++x)
         {
@@ -289,7 +309,7 @@ jit_featureset::jit_featureset(
             }        
         }
     }
-    
+#endif    
     
     mapnik::context_ptr ctx=boost::make_shared<mapnik::context_type>();
     
