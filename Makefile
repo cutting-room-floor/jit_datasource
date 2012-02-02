@@ -1,10 +1,10 @@
 CXX = clang++
 
-CXXFLAGS = -DMAPNIK_DEBUG -fPIC -O0 -g $(shell mapnik-config --cflags)
+CXXFLAGS = -DMAPNIK_DEBUG -fPIC -O0 -g $(shell mapnik-config --cflags) -DURDL_DISABLE_SSL=1 -Iurdl/include
 
-LIBS = -lfreetype -lcurl -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
+LIBS = -lfreetype -lyajl $(shell mapnik-config --libs --ldflags) -licuuc
 
-SRC = $(wildcard *.cpp)
+SRC = $(wildcard *.cpp) urdl/src/urdl.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

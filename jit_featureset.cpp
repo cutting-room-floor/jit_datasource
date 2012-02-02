@@ -34,9 +34,8 @@
 #include "yajl/yajl_parse.h"
 #include "jit_featureset.hpp"
 
-// curl
-#include "basiccurl.h"
-
+// urdl
+#include <urdl/istream.hpp>
 
 #ifdef MAPNIK_DEBUG
 //#include <mapnik/timer.hpp>
@@ -279,10 +278,12 @@ jit_featureset::jit_featureset(
                     "{x}", boost::lexical_cast<std::string>(x)),
                     "{y}", boost::lexical_cast<std::string>(y));
                 std::cerr << url << std::endl;
-                CURL_LOAD_DATA* resp = grab_http_response(url.c_str());
-                if ((resp != 0) && (resp->nbytes > 0)) 
+                urdl::istream is(url);
+                if (is)
                 {
-                    json_input.push_back(std::string(resp->data,resp->nbytes));
+                    std::stringstream buffer;
+                    buffer << is.rdbuf();
+                    json_input.push_back(buffer.str());
                 }
                 ++count;
             }        

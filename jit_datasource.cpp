@@ -30,9 +30,7 @@
 #include <string>
 #include <algorithm>
 
-// curl
-#include "basiccurl.h"
-
+#include <urdl/istream.hpp>
 // yajl
 #include "yajl/yajl_tree.h"
 
@@ -74,8 +72,7 @@ void jit_datasource::bind() const {
     mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
     //mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
     mapnik::projection const wgs84 = mapnik::projection("+proj=lonlat +datum=WGS84");
-    char errbuf[1024];
-
+    
     // std::map<std::string, mapnik::parameters> statistics_;
 
     // Paths for yajl
@@ -88,21 +85,17 @@ void jit_datasource::bind() const {
 
     mapnik::proj_transform transformer(merc, wgs84);
 
-    CURL_LOAD_DATA* resp = grab_http_response(url_.c_str());
-
-    if ((resp == NULL) || (resp->nbytes == 0)) {
+    urdl::istream is(url_);
+    if (!is)
+    {
         throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint could not be reached.");
     }
-
-    //char *blx = new char[resp->nbytes + 1];
-    //memcpy(blx, resp->data, resp->nbytes);
-    //blx[resp->nbytes] = '\0';
-
-    std::string tjstring = boost::trim_left_copy(std::string(resp->data,resp->nbytes));
-
-    //delete[] blx;
-    free(resp->data);
-    errbuf[0] = 0;
+    std::stringstream buffer;
+    buffer << is.rdbuf();
+    std::string tjstring(buffer.str());
+    boost::trim_left(tjstring);
+    
+    char errbuf[1024];
     yajl_val node;
     yajl_val v;
 
