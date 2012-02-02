@@ -23,7 +23,6 @@
 // boost
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
-
 // mapnik
 #include <mapnik/box2d.hpp>
 #include <mapnik/proj_transform.hpp>
@@ -32,7 +31,7 @@
 #include <algorithm>
 
 // curl
-#include "./basiccurl.h"
+#include "basiccurl.h"
 
 // yajl
 #include "yajl/yajl_tree.h"
@@ -214,72 +213,36 @@ mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
     if (!is_bound_) bind();
 
     mapnik::projection const merc = mapnik::projection(MERCATOR_PROJ4);
-    //mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
     mapnik::projection const wgs84 = mapnik::projection("+proj=lonlat +datum=WGS84");
     mapnik::proj_transform transformer(merc, wgs84);
-
     mapnik::box2d <double> bb = q.get_unbuffered_bbox();
-
     transformer.forward(bb);
-
+    
     if (bb.width() == 0) {
         // Invalid tiles mean we'll do dangerous math.
         return mapnik::featureset_ptr();
     }
-
-#ifdef MAPNIK_DEBUG
-    // std::clog << "JIT Plugin: unbuffered bbox: " << bb << std::endl;
-#endif
-
+    
     mapnik::coord2d c = bb.center();
-
+    
     const double MAXEXTENT = 20037508.34;
     const double MERCA = 6378137;
     const double D2R = M_PI / 180.0;
     double mercwidth = (MERCA * bb.maxx() * D2R) -
       (MERCA * bb.minx() * D2R);
+    
+// FIXME !! ////////////////////////////////////////////////
     double z = abs(ceil(-(std::log(mercwidth / MAXEXTENT) -
       std::log(2.0)) / std::log(2.0)));
-
+///////////////////////////////////////////////////////////
+    
     // Also bail early if the datasource indicates that there
     // will be no tiles here.
     if (z > maxzoom_ || z < minzoom_) {
         return mapnik::featureset_ptr();
     }
-
-    double d = 256.0 * std::pow(2.0, z - 1.0);
-    double Bc = (256.0 * std::pow(2.0, z)) / 360.0;
-    double Cc = (256.0 * std::pow(2.0, z)) / (2 * M_PI);
-    double f = std::min(std::max(std::sin(D2R * c.y), -0.99999999), 0.9999999);
-    double x = floor(d + c.x * Bc);
-    double y = d + ((0.5 * std::log((1.0 + f) / (1.0 - f))) * (Cc * -1.0));
-
-    int tx = floor(x / 256);
-    int ty = floor(y / 256);
-
-    thisurl_ = boost::replace_all_copy(
-        boost::replace_all_copy(
-        boost::replace_all_copy(tileurl_,
-            "{z}", boost::lexical_cast<std::string>(z)),
-            "{x}", boost::lexical_cast<std::string>(tx)),
-            "{y}", boost::lexical_cast<std::string>(ty));
-
-    CURL_LOAD_DATA* resp = grab_http_response(thisurl_.c_str());
-
-    if ((resp != NULL) && (resp->nbytes > 0)) {
-        //char *blx = new char[resp->nbytes + 1];
-        //memcpy(blx, resp->data, resp->nbytes);
-        //blx[resp->nbytes] = '\0';
-        std::string dstring(resp->data,resp->nbytes);
-        //delete[] blx;
-        free(resp->data);
-        return boost::make_shared<jit_featureset>(
-            q.get_bbox(),
-            dstring,
-            desc_.get_encoding());
-    } else {
-        return mapnik::featureset_ptr();
-    }
+    // passed transformed bbox (WGS84) and zoom level
+    return boost::make_shared<jit_featureset>(bb, z, tileurl_, desc_.get_encoding());
 }
 
 mapnik::featureset_ptr
