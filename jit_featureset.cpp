@@ -23,13 +23,20 @@
 #include <mapnik/feature_factory.hpp>
 #include <mapnik/geometry.hpp>
 #include <mapnik/util/geometry_to_wkt.hpp>
+#include "spherical_mercator.hpp"
+#include "downloader.hpp"
 
 #include <string>
 #include <vector>
-
+// boost
+#include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 // yajl
 #include "yajl/yajl_parse.h"
 #include "jit_featureset.hpp"
+
+// urdl
+#include <urdl/istream.hpp>
 
 #ifdef MAPNIK_DEBUG
 //#include <mapnik/timer.hpp>
@@ -227,66 +234,143 @@ static yajl_callbacks callbacks = {
 };
 
 jit_featureset::jit_featureset(
-    mapnik::box2d<double> const& box,
-    std::string const& input_string,
+    mapnik::box2d<double> const& bbox, int zoom,
+    std::string const& tileurl,
     std::string const& encoding)
-    : box_(box),
+    : box_(bbox),
       feature_id_(1),
-      input_string_(input_string),
       tr_(new mapnik::transcoder(encoding)),
       features_(),
-      itt_(),
-      hand() {
-
-    pstate state_bundle;
-
-    state_bundle.state = parser_outside;
-    state_bundle.done = 0;
-
-    hand = yajl_alloc(
-        &callbacks, NULL,
-        &state_bundle);
-
-    yajl_config(hand, yajl_allow_comments, 1);
-    yajl_config(hand, yajl_allow_trailing_garbage, 1);
-    mapnik::context_ptr ctx=boost::make_shared<mapnik::context_type>();
-    mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx,feature_id_));
-    state_bundle.feature = feature;
-
-    int parse_result;
-    for (itt_ = 0; itt_ < input_string_.length(); itt_++) {
-        
-        parse_result = yajl_parse(hand,
-                                  (const unsigned char *)&input_string_[itt_], 1);
+      hand() 
+{
     
-        if (parse_result == yajl_status_error) {
-            unsigned char *str = yajl_get_error(hand,
-                                                1,  (const unsigned char*) input_string_.c_str(),
-                                                input_string_.length());
-            std::ostringstream errmsg;
-            errmsg << "GeoJSON Plugin: invalid GeoJSON detected: " << (const char*) str << "\n";
-            yajl_free_error(hand, str);
-            throw mapnik::datasource_exception(errmsg.str());
-        } else if (state_bundle.done == 1) {
-            features_.push_back(state_bundle.feature);
-            mapnik::feature_ptr
-                feature(mapnik::feature_factory::create(ctx,feature_id_++));
-        
-            // reset
-            state_bundle.point_cache.clear();
-            state_bundle.done = 0;
-            state_bundle.geometry_type = "";
-            state_bundle.feature = feature;
+#ifdef MAPNIK_DEBUG
+    // std::clog << "JIT Plugin: unbuffered bbox: " << bb << std::endl;
+#endif
+
+    mapnik::spherical_mercator<> merc;
+    
+    double x0 = bbox.minx();
+    double y0 = bbox.maxy();
+    double x1 = bbox.maxx();
+    double y1 = bbox.miny();
+    
+    merc.to_pixels(x0,y0,zoom);    
+    merc.to_pixels(x1,y1,zoom);
+
+    const double tile_size = 256.0;
+    int minx = int(x0/tile_size);
+    int maxx = int(x1/tile_size) + 1;
+    int miny = int(y0/tile_size);
+    int maxy = int(y1/tile_size) + 1;
+    std::cerr << minx << "<->" << maxx << "  " << miny <<"<->" << maxy << std::endl;    
+    
+    std::vector<std::string> json_input;
+    int count=0;
+#if 1
+    {
+        mapnik::tile_downloader downloader(json_input); // RAII
+        for ( int x = minx; x < maxx; ++x)
+        {
+            for (int y = miny; y < maxy; ++y)
+            {               
+                std::string url = boost::replace_all_copy(
+                    boost::replace_all_copy(boost::replace_all_copy(tileurl,
+                    "{z}", boost::lexical_cast<std::string>(zoom)),
+                    "{x}", boost::lexical_cast<std::string>(x)),
+                    "{y}", boost::lexical_cast<std::string>(y));
+                downloader.push(boost::protect(boost::bind(&mapnik::download_handler::sync_start, _1, url)));
+                ++count;
+            }        
         }
     }
+
+#else
     
-    yajl_free(hand);
+    {
+        for ( int x = minx; x < maxx; ++x)
+        {
+            for (int y = miny; y < maxy; ++y)
+            {               
+                std::string url = boost::replace_all_copy(
+                    boost::replace_all_copy(boost::replace_all_copy(tileurl,
+                    "{z}", boost::lexical_cast<std::string>(zoom)),
+                    "{x}", boost::lexical_cast<std::string>(x)),
+                    "{y}", boost::lexical_cast<std::string>(y));
+                std::cerr << url << std::endl;
+                urdl::istream is(url);
+                if (is)
+                {
+                    std::stringstream buffer;
+                    buffer << is.rdbuf();
+                    json_input.push_back(buffer.str());
+                }
+                ++count;
+            }        
+        }
+    }
+#endif    
+    
+    mapnik::context_ptr ctx=boost::make_shared<mapnik::context_type>();
+    
+    
+    BOOST_FOREACH ( std::string const& input_string, json_input)
+    {
+        pstate state_bundle;
+        
+        state_bundle.state = parser_outside;
+        state_bundle.done = 0;
+        
+        hand = yajl_alloc(
+            &callbacks, NULL,
+            &state_bundle);
+        
+        yajl_config(hand, yajl_allow_comments, 1);
+        yajl_config(hand, yajl_allow_trailing_garbage, 1);
+        mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx,feature_id_));
+        state_bundle.feature = feature;
+        
+        for ( int itt = 0; itt < input_string.length(); ++itt) 
+        {            
+            int parse_result = yajl_parse(hand,
+                                      (const unsigned char *)&input_string[itt], 1);
+            
+            if (parse_result == yajl_status_error) 
+            {
+                unsigned char *str = yajl_get_error(hand,
+                                                    1,  (const unsigned char*) input_string.c_str(),
+                                                    input_string.length());
+                std::ostringstream errmsg;
+                errmsg << "GeoJSON Plugin: invalid GeoJSON detected: " << (const char*) str << "\n";
+                yajl_free_error(hand, str);
+                throw mapnik::datasource_exception(errmsg.str());
+            } 
+            else if (state_bundle.done == 1) 
+            {
+                features_.push_back(state_bundle.feature);
+                mapnik::feature_ptr
+                    feature(mapnik::feature_factory::create(ctx,feature_id_++));        
+                // reset
+                state_bundle.point_cache.clear();
+                state_bundle.done = 0;
+                state_bundle.geometry_type = "";
+                state_bundle.feature = feature;
+            }
+        }
+        std::cerr << "SIZE = " << features_.size() << std::endl;
+        yajl_free(hand);
+    }
+    
+    
     feature_id_ = 0;
+
 }
 
 jit_featureset::~jit_featureset() { }
 
 mapnik::feature_ptr jit_featureset::next() {
+    
+    //return mapnik::feature_ptr();
     feature_id_++;
     if (feature_id_ <= features_.size()) {
         return features_.at(feature_id_ - 1);
