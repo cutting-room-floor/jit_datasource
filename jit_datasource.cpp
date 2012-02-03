@@ -198,8 +198,8 @@ mapnik::layer_descriptor jit_datasource::get_descriptor() const {
     return desc_;
 }
 
-std::map<std::string, mapnik::parameters> jit_datasource::get_statistics() const {
-    return statistics_;
+mapnik::statistics_ptr jit_datasource::get_statistics() const {
+    return boost::make_shared<mapnik::statistics>(statistics_);
 }
 
 mapnik::featureset_ptr jit_datasource::features(mapnik::query const& q) const {
