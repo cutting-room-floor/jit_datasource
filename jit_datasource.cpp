@@ -70,16 +70,14 @@ void jit_datasource::bind() const {
     if (is_bound_) return;
 
     mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
-    //mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
     mapnik::projection const wgs84 = mapnik::projection("+proj=lonlat +datum=WGS84");
-    
     // std::map<std::string, mapnik::parameters> statistics_;
 
     // Paths for yajl
     const char * minzoom_path[] = { "minzoom", (const char *) 0 };
     const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
     const char * vectors_path[] = { "vectors", (const char *) 0 };
-    const char * type_path[] = { "geometry_type", (const char *) 0 };
+    const char * type_path[] = { "data", "geometry_type", (const char *) 0 };
     const char * bounds_path[] = { "bounds", (const char *) 0 };
     const char * statistics_path[] = { "statistics", (const char *) 0 };
 
@@ -94,7 +92,7 @@ void jit_datasource::bind() const {
     buffer << is.rdbuf();
     std::string tjstring(buffer.str());
     boost::trim_left(tjstring);
-    
+
     char errbuf[1024];
     yajl_val node;
     yajl_val v;
@@ -114,12 +112,11 @@ void jit_datasource::bind() const {
     v = yajl_tree_get(node, vectors_path, yajl_t_string);
     char* ts = YAJL_GET_STRING(v);
     tileurl_ = std::string(ts);
+
     v = yajl_tree_get(node, type_path, yajl_t_string);
     if (v != NULL) {
-      // const char* type_c_str = strdup(YAJL_GET_STRING(v));
-      // TODO: assign geometry type
-    } else {
-      // std::clog << "geometry type undefined\n";
+      const char* type_c_str = strdup(YAJL_GET_STRING(v));
+      geometry_type_string_ = std::string(type_c_str);
     }
 
     v = yajl_tree_get(node, statistics_path, yajl_t_object);
@@ -190,7 +187,15 @@ mapnik::box2d<double> jit_datasource::envelope() const {
 }
 
 boost::optional<mapnik::datasource::geometry_t> jit_datasource::get_geometry_type() const {
-    return boost::optional<mapnik::datasource::geometry_t>();
+    boost::optional<mapnik::datasource::geometry_t> result;
+    if (geometry_type_string_ == "linestring") {
+        result.reset(mapnik::datasource::LineString);
+    } else if (geometry_type_string_ == "point") {
+        result.reset(mapnik::datasource::Point);
+    } else if (geometry_type_string_ == "polygon") {
+        result.reset(mapnik::datasource::Polygon);
+    }
+    return result;
 }
 
 mapnik::layer_descriptor jit_datasource::get_descriptor() const {
