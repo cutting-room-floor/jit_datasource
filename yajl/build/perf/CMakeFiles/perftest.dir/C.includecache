@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/tmcw/Code/cpp/jit_datasource/yajl/perf/documents.c
+documents.h
+/Users/tmcw/Code/cpp/jit_datasource/yajl/perf/documents.h
+stdlib.h
+-
+string.h
+-
+
+/Users/tmcw/Code/cpp/jit_datasource/yajl/perf/documents.h
+
+/Users/tmcw/Code/cpp/jit_datasource/yajl/perf/perftest.c
+yajl/yajl_parse.h
+-
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+documents.h
+/Users/tmcw/Code/cpp/jit_datasource/yajl/perf/documents.h
+sys/time.h
+-
+windows.h
+-
+
+perf/../yajl-2.0.4/include/yajl/yajl_common.h
+stddef.h
+-
+
+perf/../yajl-2.0.4/include/yajl/yajl_parse.h
+yajl/yajl_common.h
+-
+stddef.h
+-
+

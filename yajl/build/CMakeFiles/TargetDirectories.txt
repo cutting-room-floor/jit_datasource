@@ -1,0 +1,9 @@
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/CMakeFiles/doc.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/reformatter/CMakeFiles/json_reformat.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/verify/CMakeFiles/json_verify.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/example/CMakeFiles/parse_config.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/perf/CMakeFiles/perftest.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/CMakeFiles/test.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/src/CMakeFiles/yajl.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/src/CMakeFiles/yajl_s.dir
+/Users/tmcw/Code/cpp/jit_datasource/yajl/build/test/CMakeFiles/yajl_test.dir

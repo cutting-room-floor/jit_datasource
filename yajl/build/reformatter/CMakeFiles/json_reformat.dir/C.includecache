@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/tmcw/Code/cpp/jit_datasource/yajl/reformatter/json_reformat.c
+yajl/yajl_parse.h
+-
+yajl/yajl_gen.h
+-
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+
+reformatter/../yajl-2.0.4/include/yajl/yajl_common.h
+stddef.h
+-
+
+reformatter/../yajl-2.0.4/include/yajl/yajl_gen.h
+yajl/yajl_common.h
+-
+stddef.h
+-
+
+reformatter/../yajl-2.0.4/include/yajl/yajl_parse.h
+yajl/yajl_common.h
+-
+stddef.h
+-
+
