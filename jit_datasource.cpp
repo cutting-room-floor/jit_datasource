@@ -20,20 +20,16 @@
  *
  *****************************************************************************/
 
-// boost
-#include <boost/make_shared.hpp>
-#include <boost/algorithm/string.hpp>
 // mapnik
 #include <mapnik/box2d.hpp>
 #include <mapnik/proj_transform.hpp>
-
-#include <string>
-#include <algorithm>
-
+// boost
+#include <boost/make_shared.hpp>
+#include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <urdl/istream.hpp>
-// yajl
-#include "yajl/yajl_tree.h"
-
 // file plugin
 #include "jit_datasource.hpp"
 #include "jit_featureset.hpp"
@@ -43,6 +39,9 @@
 #include <iomanip>
 #include <sstream>
 #endif
+#include <string>
+#include <algorithm>
+
 
 using mapnik::datasource;
 using mapnik::parameters;
@@ -70,18 +69,9 @@ void jit_datasource::bind() const {
     if (is_bound_) return;
 
     mapnik::projection const merc =  mapnik::projection(MERCATOR_PROJ4);
-    //mapnik::projection const wgs84 = mapnik::projection("+init=epsg:4326");
     mapnik::projection const wgs84 = mapnik::projection("+proj=lonlat +datum=WGS84");
     
     // std::map<std::string, mapnik::parameters> statistics_;
-
-    // Paths for yajl
-    const char * minzoom_path[] = { "minzoom", (const char *) 0 };
-    const char * maxzoom_path[] = { "maxzoom", (const char *) 0 };
-    const char * vectors_path[] = { "vectors", (const char *) 0 };
-    const char * type_path[] = { "geometry_type", (const char *) 0 };
-    const char * bounds_path[] = { "bounds", (const char *) 0 };
-    const char * statistics_path[] = { "statistics", (const char *) 0 };
 
     mapnik::proj_transform transformer(merc, wgs84);
 
@@ -92,83 +82,34 @@ void jit_datasource::bind() const {
     }
     std::stringstream buffer;
     buffer << is.rdbuf();
-    std::string tjstring(buffer.str());
-    boost::trim_left(tjstring);
+
+    using boost::property_tree::ptree;
+    ptree pt;
+    read_json(buffer,pt);
+    minzoom_ = pt.get<unsigned>("minzoom",0);
+    maxzoom_ = pt.get<unsigned>("maxzoom",18);
+    tileurl_ = pt.get<std::string>("vectors");
     
-    char errbuf[1024];
-    yajl_val node;
-    yajl_val v;
-
-    node = yajl_tree_parse(tjstring.c_str(), errbuf, sizeof(errbuf));
-
-    if (node == NULL) {
-        throw mapnik::datasource_exception("JIT Plugin: TileJSON endpoint invalid.");
+    std::vector<double> b;
+    BOOST_FOREACH(const ptree::value_type& v, pt.get_child("bounds"))
+    {        
+        b.push_back(boost::lexical_cast<double>(v.second.data()));
     }
-
-    v = yajl_tree_get(node, minzoom_path, yajl_t_number);
-    minzoom_ = YAJL_GET_INTEGER(v);
-
-    v = yajl_tree_get(node, maxzoom_path, yajl_t_number);
-    maxzoom_ = YAJL_GET_INTEGER(v);
-
-    v = yajl_tree_get(node, vectors_path, yajl_t_string);
-    char* ts = YAJL_GET_STRING(v);
-    tileurl_ = std::string(ts);
-    v = yajl_tree_get(node, type_path, yajl_t_string);
-    if (v != NULL) {
-      // const char* type_c_str = strdup(YAJL_GET_STRING(v));
-      // TODO: assign geometry type
-    } else {
-      // std::clog << "geometry type undefined\n";
-    }
-
-    v = yajl_tree_get(node, statistics_path, yajl_t_object);
-    if (v != NULL) {
-        std::clog << "statistics defined\n";
-        for (unsigned i = 0; i < YAJL_GET_OBJECT(v)->len; i++) {
-            // std::string ft = std::string(strdup(
-            //       YAJL_GET_STRING(YAJL_GET_OBJECT(v)->values[i])));
-            std::string field_name = std::string(strdup(
-                  YAJL_GET_OBJECT(v)->keys[i]));
-
-            mapnik::parameters field_parameters;
-            yajl_val field_stats_obj;
-            field_stats_obj = YAJL_GET_OBJECT(v)->values[i];
-
-            if (field_stats_obj != NULL && YAJL_IS_OBJECT(field_stats_obj)) {
-                for (unsigned j = 0; j < YAJL_GET_OBJECT(field_stats_obj)->len; j++) {
-                    std::string stat_name = std::string(strdup(
-                          YAJL_GET_OBJECT(field_stats_obj)->keys[j]));
-
-                    if (YAJL_IS_NUMBER(YAJL_GET_OBJECT(field_stats_obj)->values[j])) {
-                        double val = strtod(YAJL_GET_NUMBER(YAJL_GET_OBJECT(field_stats_obj)->values[j]), NULL);
-                        field_parameters[stat_name] = val;
-                    }
-                }
-            }
-            statistics_.insert(std::pair<std::string, mapnik::parameters>(field_name, field_parameters));
-        }
-    } else {
-        std::clog << "statistics undefined\n";
-    }
-
-    v = yajl_tree_get(node, bounds_path, yajl_t_array);
-    if ((v != NULL) && (YAJL_GET_ARRAY(v)->len == 4)) {
-      mapnik::box2d <double> latBox = mapnik::box2d<double>(
-          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[0]),
-          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[1]),
-          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[2]),
-          YAJL_GET_DOUBLE(YAJL_GET_ARRAY(v)->values[3]));
-
-      transformer.backward(latBox);
-      extent_ = latBox;
-    } else {
+    
+    if (b.size() == 4)
+    {
+        mapnik::box2d <double> latBox(b[0],b[1],b[2],b[3]);    
+        transformer.backward(latBox);
+        extent_ = latBox;
+    } 
+    else 
+    {
 #ifdef MAPNIK_DEBUG
-      std::clog << "JIT Plugin: extent not found in TileJSON, setting to world.\n";
+        std::clog << "JIT Plugin: extent not found in TileJSON, setting to world.\n";
 #endif
-      extent_.init(-20037508.34, -20037508.34, 20037508.34, 20037508.34);
+        extent_.init(-20037508.34, -20037508.34, 20037508.34, 20037508.34);
     }
-
+    
     is_bound_ = true;
 }
 
