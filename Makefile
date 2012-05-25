@@ -2,7 +2,7 @@ CXX = clang++
 
 CXXFLAGS = -fPIC -DNDEBUG -O3 $(shell mapnik-config --cflags) -DURDL_DISABLE_SSL=1 -Iurdl/include
 
-LIBS = -lfreetype $(shell mapnik-config --libs --ldflags) -licuuc -lboost_thread
+LIBS = $(shell mapnik-config --libs --ldflags) -licuuc -lboost_thread -lboost_system
 
 SRC = $(wildcard *.cpp) urdl/src/urdl.cpp
 
