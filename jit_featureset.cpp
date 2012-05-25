@@ -125,11 +125,11 @@ jit_featureset::jit_featureset(
     
     typedef std::string::const_iterator iterator_type;
     mapnik::context_ptr ctx = boost::make_shared<mapnik::context_type>();
-    mapnik::json::feature_collection_parser p(ctx,*tr_);
+    mapnik::json::feature_collection_parser<iterator_type> p(ctx,*tr_);
     
     BOOST_FOREACH ( std::string const& str, json_input)
     {        
-        bool result = p.parse(str, features_);
+        bool result = p.parse(str.begin(),str.end(), features_);
         if (!result) 
         {
             std::clog << "Failed parsing input JSON!" << std::endl;
