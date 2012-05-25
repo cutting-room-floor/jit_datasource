@@ -8,7 +8,7 @@
 <StyleName>osm</StyleName>
     <Datasource>
         <Parameter name="type"><![CDATA[jit]]></Parameter>
-        <Parameter name="url"><![CDATA[http://ssd.local/view/osm.road.json]]></Parameter>
+        <Parameter name="url"><![CDATA[http://localhost:9000/view/osm.road.json]]></Parameter>
     </Datasource>
 </Layer>
 </Map>

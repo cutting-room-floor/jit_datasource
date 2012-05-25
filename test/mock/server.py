@@ -4,7 +4,7 @@
 
 import BaseHTTPServer, json, re
 
-view_json = json.load(open('view.json', 'r'))
+view_json = json.load(open('test/mock/view.json', 'r'))
 
 def serve_view(s):
     s.wfile.write(json.dumps(view_json))

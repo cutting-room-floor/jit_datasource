@@ -13,7 +13,7 @@ var image = new mapnik.Image(256, 256);
 
 var jit = new mapnik.Datasource({
     type: 'jit',
-    url: 'http://ssd.local/view/osm.road.json'
+    url: 'http://localhost:9000/view/osm.road.json'
 });
 
 map.bufferSize = 0;
