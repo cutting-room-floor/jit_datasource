@@ -1,3 +1,5 @@
+# Replaced by [tilelive-vector](https://github.com/mapbox/tilelive-vector) et al
+
 ## JIT Datasource
 
 A just-in-time datasource for Mapnik. It takes bboxes,
